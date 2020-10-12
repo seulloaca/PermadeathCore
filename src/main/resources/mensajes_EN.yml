@@ -1,0 +1,13 @@
+# Message configuration for english language
+Server-Messages:
+  OnJoin: '&e%player% joined the game'
+  OnLeave: '&e%player% left the game'
+  StormEnd: '&cThe storm has been ended'
+  Sleep: '&7%player% &ewent to sleep, Sweet dreams!.'
+  Sleeping: '&7%player% &eis sleeping &e(&b%players%&7/&b%needed%&e)'
+  DeathMessageTitle: '&cPermadeath!'
+  DeathMessageSubtitle: '%player% died'
+  DeathMessageChat: '&c&lThis is the beginning of the eternal suffering of &4&l%player%&c&l. HAS BEEN PERMABANNED!'
+  DeathTrainMessage: '&cStarting the Death Train with a duration of %tiempo% hours!'
+  DeathTrainMessageMinutes: '&cStarting the Death Train with a duration of %tiempo% minutes!'
+  ActionBarMessage: '&7%tiempo% storm left'

@@ -1,0 +1,1368 @@
+
+package com.permadeathcore.Listener.Entity;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
+
+import com.permadeathcore.Main;
+import com.permadeathcore.NMS.VersionManager;
+import com.permadeathcore.Task.GatoGalacticoTask;
+import com.permadeathcore.Util.Item.CustomItems;
+import com.permadeathcore.Util.Item.ItemBuilder;
+import com.permadeathcore.Util.Item.LeatherArmorBuilder;
+import org.bukkit.*;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.block.Biome;
+import org.bukkit.block.banner.Pattern;
+import org.bukkit.block.banner.PatternType;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.*;
+import org.bukkit.entity.Entity;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.*;
+import org.bukkit.event.weather.WeatherChangeEvent;
+import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BannerMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionData;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionType;
+
+public class SpawnListener implements Listener{
+
+    private Main plugin;
+
+    private SplittableRandom random;
+    private ArrayList<LivingEntity> gatosSupernova;
+
+    // 1.16
+    private EntityType PIGMAN;
+    private Class pigmanClass;
+
+    // Spawns
+    private boolean optimizeSpawns;
+
+    public SpawnListener(Main instance) {
+
+        this.plugin = instance;
+        this.random = new SplittableRandom();
+        this.gatosSupernova = new ArrayList<>();
+        this.optimizeSpawns = instance.getConfig().getBoolean("Toggles.Optimizar-Mob-Spawns");
+
+        if (VersionManager.isRunningNetherUpdate()) {
+            this.PIGMAN = EntityType.valueOf("ZOMBIFIED_PIGLIN");
+        } else {
+            this.PIGMAN = EntityType.valueOf("PIG_ZOMBIE");
+        }
+        this.pigmanClass = PIGMAN.getEntityClass();
+    }
+
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onSpawn(CreatureSpawnEvent event) {
+        if (event.isCancelled()) return;
+        LivingEntity entity = event.getEntity();
+        EntityType eventEntityType = event.getEntityType();
+        Location location = event.getLocation();
+        World world = location.getWorld();
+        CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
+
+        boolean highCount = false;
+
+        if (optimizeSpawns && world.getEnvironment() == World.Environment.NORMAL) {
+            if (reason == CreatureSpawnEvent.SpawnReason.NATURAL || reason == CreatureSpawnEvent.SpawnReason.CUSTOM) {
+                if (eventEntityType == EntityType.COD || eventEntityType == EntityType.VINDICATOR || eventEntityType == EntityType.GUARDIAN || eventEntityType == EntityType.ELDER_GUARDIAN || eventEntityType == PIGMAN || eventEntityType == EntityType.EVOKER || eventEntityType == EntityType.CAVE_SPIDER || eventEntityType == EntityType.SKELETON || eventEntityType == EntityType.BLAZE) {
+                    if (Arrays.stream(location.getChunk().getEntities())
+                            .filter(entity1 -> entity1.getType() == eventEntityType)
+                            .map(eventEntityType.getEntityClass()::cast)
+                            .collect(Collectors.toList()).size() >= 8) {
+                        highCount = true;
+                    }
+                }
+            }
+        }
+        if (highCount) {
+            event.setCancelled(true);
+            return;
+        }
+
+        spawnBeginningMob(event);
+        spawnNetheriteMob(event);
+
+        plugin.deathTrainEffects(entity);
+
+        if (entity instanceof Spider || eventEntityType == EntityType.SKELETON) {
+            if (plugin.getConfig().getBoolean("Toggles.Spider-Effect") && entity instanceof Spider) {
+                addMobEffects(entity, 100);
+            }
+            if (plugin.getDays() >= 20) {
+                if (reason == CreatureSpawnEvent.SpawnReason.CUSTOM) return;
+                spawnSkeletonClass(entity, location);
+            }
+        }
+
+        if (plugin.getDays() >= 20) {
+
+            if (eventEntityType == EntityType.PHANTOM) {
+
+                Phantom phantom = (Phantom) entity;
+                int pSize = (plugin.getDays() < 50 ? 9 : 18);
+
+                plugin.getNmsAccesor().setMaxHealth(phantom, plugin.getNmsAccesor().getMaxHealth(phantom) * 2, true);
+
+                if (plugin.getDays() >= 40) {
+                    Skeleton skeleton = (Skeleton) plugin.getNmsHandler().spawnNMSEntity("Skeleton", EntityType.SKELETON, event.getLocation(), CreatureSpawnEvent.SpawnReason.NATURAL);
+                    phantom.addPassenger(skeleton);
+                }
+
+                if (plugin.getDays() >= 50) {
+                    int r = (plugin.getDays() < 60 ? 1 : 25);
+                    if (random.nextInt(101) <= r) {
+                        for (int i = 0; i < 4; i++) {
+                            plugin.getNmsHandler().spawnCustomGhast(event.getLocation(), CreatureSpawnEvent.SpawnReason.CUSTOM, true);
+                        }
+                    }
+                    addMobEffects(entity, 3);
+                }
+                phantom.setSize(pSize);
+            }
+
+            if (event.getEntityType() == PIGMAN) { // Pigman = 1.15 y 1.14 PIG_ZOMBIE | 1.16 ZOMBIFIED_PIGLIN
+
+                if (plugin.getDays() >= 60) {
+
+                    event.setCancelled(true);
+                    return;
+                }
+
+                LivingEntity pigman = entity;
+
+                try {
+                    Method m = pigman.getClass().getDeclaredMethod("setAngry", boolean.class);
+                    m.setAccessible(true);
+                    m.invoke(pigman, true);
+                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                    e.printStackTrace();
+                }
+
+                if (plugin.getDays() >= 30 && plugin.getDays() < 40) {
+
+                    EntityEquipment eq = pigman.getEquipment();
+
+                    eq.setHelmet(new ItemStack(Material.DIAMOND_HELMET));
+                    eq.setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
+                    eq.setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
+                    eq.setBoots(new ItemStack(Material.DIAMOND_BOOTS));
+                }
+
+                if (plugin.getDays() >= 40) {
+
+                    if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) return;
+                    if (plugin.getDays() >= 60 && world.getEnvironment() == World.Environment.NETHER) {
+                        event.setCancelled(true);
+                        return;
+                    }
+
+                    int randomProb = random.nextInt(99) + 1;
+                    int cantidad = (plugin.getDays() < 50 ? 5 : 20);
+
+                    if (randomProb <= cantidad) {
+
+                        EntityEquipment eq = pigman.getEquipment();
+                        int clase = ThreadLocalRandom.current().nextInt(1, 5 + 1);
+                        if (clase == 1) {
+                            spawnUltraRavager(event);
+                        }
+
+                        if (clase == 2) {
+
+                            ItemStack helmet = new LeatherArmorBuilder(Material.LEATHER_HELMET, 1).setColor(Color.YELLOW).build();
+                            ItemStack che = new LeatherArmorBuilder(Material.LEATHER_CHESTPLATE, 1).setColor(Color.YELLOW).build();
+                            ItemStack le = new LeatherArmorBuilder(Material.LEATHER_LEGGINGS, 1).setColor(Color.YELLOW).build();
+                            ItemStack bo = new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.YELLOW).build();
+
+                            eq.setHelmet(helmet);
+                            eq.setChestplate(che);
+                            eq.setLeggings(le);
+                            eq.setBoots(bo);
+
+                            plugin.getNmsAccesor().setMaxHealth(pigman, pigman.getHealth(), true);
+                            LivingEntity bee;
+
+                            if (VersionManager.isRunning14()) {
+
+                                bee = (LivingEntity) event.getLocation().getWorld().spawnEntity(event.getLocation(), EntityType.PARROT);
+                                plugin.getNmsAccesor().registerAttribute(Attribute.GENERIC_ATTACK_DAMAGE, 8.0D, bee);
+                                plugin.getNmsAccesor().injectHostilePathfinders(bee);
+
+                            } else {
+
+                                bee = (LivingEntity) plugin.getNmsHandler().spawnNMSCustomEntity("PigmanJockeys.SpecialBee", EntityType.valueOf("BEE"), event.getLocation(), CreatureSpawnEvent.SpawnReason.CUSTOM);
+                            }
+
+                            pigman.setCollidable(true);
+                            bee.setCollidable(true);
+
+                            Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+                                @Override
+                                public void run() {
+
+                                    pigman.teleport(bee.getLocation());
+                                    bee.addPassenger(pigman);
+                                }
+                            }, 10L);
+                        }
+
+                        if (clase == 3) {
+
+                            pigman.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(8.0D);
+                            pigman.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 3));
+
+                            Ghast ghast = (Ghast) plugin.getNmsHandler().spawnCustomGhast(event.getLocation(), CreatureSpawnEvent.SpawnReason.CUSTOM, false);
+                            ghast.getPersistentDataContainer().set(new NamespacedKey(plugin, "tp_ghast"), PersistentDataType.BYTE, (byte) 1);
+
+                            ghast.setCollidable(true);
+                            pigman.setCollidable(true);
+
+                            ghast.addPassenger(pigman);
+                        }
+
+                        if (clase == 4) {
+
+                            MagmaCube cube = (MagmaCube) plugin.getNmsHandler().spawnNMSEntity("MagmaCube", EntityType.MAGMA_CUBE, event.getLocation(), CreatureSpawnEvent.SpawnReason.SLIME_SPLIT);
+                            cube.setSize(1);
+
+                            plugin.getNmsAccesor().setMaxHealth(pigman, 1.0D, true);
+                            pigman.setCollidable(false);
+                            cube.addPassenger(pigman);
+                        }
+
+                        if (clase == 5) {
+
+                            ItemStack helmet = new LeatherArmorBuilder(Material.LEATHER_HELMET, 1).setColor(Color.GRAY).build();
+                            ItemStack che = new LeatherArmorBuilder(Material.LEATHER_CHESTPLATE, 1).setColor(Color.GRAY).build();
+                            ItemStack le = new LeatherArmorBuilder(Material.LEATHER_LEGGINGS, 1).setColor(Color.GRAY).build();
+                            ItemStack bo = new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.GRAY).build();
+
+                            eq.setHelmet(helmet);
+                            eq.setChestplate(che);
+                            eq.setLeggings(le);
+                            eq.setBoots(bo);
+
+                            plugin.getNmsAccesor().setMaxHealth(pigman, pigman.getHealth(), true);
+                            Pig pig = (Pig) plugin.getNmsHandler().spawnNMSCustomEntity("PigmanJockeys.SpecialPig", EntityType.PIG, event.getLocation(), CreatureSpawnEvent.SpawnReason.SPAWNER_EGG);
+
+                            Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+                                @Override
+                                public void run() {
+
+                                    pig.setSaddle(true);
+                                    pigman.teleport(pig.getLocation());
+                                    pig.addPassenger(pigman);
+                                }
+                            }, 10L);
+                        }
+                    } else {
+
+                        EntityEquipment eq = pigman.getEquipment();
+                        eq.setHelmet(new ItemStack(Material.DIAMOND_HELMET));
+                        eq.setChestplate(new ItemStack(Material.DIAMOND_CHESTPLATE));
+                        eq.setLeggings(new ItemStack(Material.DIAMOND_LEGGINGS));
+                        eq.setBoots(new ItemStack(Material.DIAMOND_BOOTS));
+                    }
+                }
+            }
+        }
+
+        if (plugin.getDays() >= 25) {
+
+            if (entity instanceof Ravager) {
+                Ravager ravager = (Ravager) entity;
+
+                if (plugin.getDays() < 40) {
+                    ravager.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+                    ravager.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, 0));
+                    ravager.setRemoveWhenFarAway(true);
+                }
+            }
+        }
+
+        if (plugin.getDays() >= 30) {
+
+            if (entity instanceof Silverfish || entity instanceof Endermite) addMobEffects(entity, 100);
+            if (entity instanceof Enderman) {
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, plugin.getDays() < 60 ? 1 : 9));
+
+                if (world.getEnvironment() == World.Environment.NETHER && plugin.getDays() >= 40) {
+                    event.setCancelled(true);
+                    Creeper c = plugin.getFactory().spawnEnderCreeper(event.getLocation(), null);
+                    c.setMetadata("nether_creeper", new FixedMetadataValue(plugin, true));
+                }
+            }
+
+            if (entity instanceof Squid) {
+                event.setCancelled(true);
+
+                if (location.getWorld().getNearbyEntities(location, 20, 20, 20).stream().filter(entity1 -> entity1 instanceof Guardian).map(Guardian.class::cast).collect(Collectors.toList()).size() < 20) {
+                    Guardian g = (Guardian) entity.getWorld().spawnEntity(event.getLocation(), EntityType.GUARDIAN);
+                    g.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+                }
+            }
+
+            if (entity instanceof IronGolem) {
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 3));
+                if (plugin.getDays() >= 40) {
+
+                    entity.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, plugin.getDays() < 60 ? 0 : 3));
+
+                    if (plugin.getDays() >= 50) {
+                        entity.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, plugin.getDays() < 60 ? 1 : 3));
+                    }
+                }
+            }
+
+            if (entity instanceof Bat) {
+                event.setCancelled(true);
+                if (location.getWorld().getLivingEntities().stream().filter(entity1 -> entity1 instanceof Blaze).map(Blaze.class::cast).collect(Collectors.toList()).size() < 30) {
+                    Blaze g = (Blaze) entity.getWorld().spawnEntity(event.getLocation(), EntityType.BLAZE);
+                    g.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, 1));
+                }
+            }
+
+            if (entity instanceof Creeper) {
+                Creeper c = (Creeper) entity;
+                c.setPowered(true);
+
+                if (plugin.getDays() >= 40) {
+                    entity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+                    entity.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, 1));
+
+                    if (plugin.getDays() >= 50) {
+
+                        if (plugin.getDays() < 60) {
+                            int r = random.nextInt(10);
+                            if (r <= 1) {
+                                plugin.getFactory().spawnEnderCreeper(location, c);
+
+                            } else {
+                                plugin.getFactory().spawnQuantumCreeper(location, c);
+                            }
+                        } else {
+                            plugin.getFactory().spawnEnderQuantumCreeper(location, c);
+                            c.setMaxFuseTicks(c.getMaxFuseTicks() / 2);
+                        }
+                    }
+                }
+            }
+
+            if (entity instanceof Pillager) {
+                Pillager p = (Pillager) entity;
+                p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0));
+
+                p.getEquipment().setItemInMainHand(new ItemBuilder(Material.CROSSBOW).addEnchant(Enchantment.QUICK_CHARGE, 4).build());
+                p.getEquipment().setItemInMainHandDropChance(0);
+
+                if (plugin.getDays() >= 50) {
+                    int prob = random.nextInt(100);
+                    if (prob == 0) {
+                        event.setCancelled(true);
+                        event.getLocation().getWorld().spawnEntity(event.getLocation(), EntityType.EVOKER);
+                    }
+                }
+            }
+        }
+
+        if (plugin.getDays() >= 40) {
+            if (entity.getType() == EntityType.GUARDIAN) {
+                if (plugin.getDays() >= 60) {
+                    event.setCancelled(true);
+
+                    if (location.getWorld().getNearbyEntities(location, 20, 20, 20).stream().filter(entity1 -> entity1 instanceof ElderGuardian).map(ElderGuardian.class::cast).collect(Collectors.toList()).size() < 5) {
+                        event.getLocation().getWorld().spawn(event.getLocation(), ElderGuardian.class);
+                    }
+                    return;
+                }
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 2));
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, 1));
+            }
+
+            if (entity.getType() == EntityType.SPIDER) {
+                event.setCancelled(true);
+                plugin.getNmsHandler().spawnNMSEntity("CaveSpider", EntityType.CAVE_SPIDER, event.getLocation(), CreatureSpawnEvent.SpawnReason.NATURAL);
+                entity.setCustomName(plugin.format("&6Araña inmortal"));
+            }
+
+            if (entity.getType() == EntityType.ZOMBIE) {
+                event.setCancelled(true);
+                if (world.getNearbyEntities(location, 15, 15, 15).stream().filter(entity1 -> entity1 instanceof Vindicator).map(Vindicator.class::cast).collect(Collectors.toList()).size() < 5) {
+                    Vindicator vindicator = (Vindicator) event.getLocation().getWorld().spawnEntity(event.getLocation(), EntityType.VINDICATOR);
+                    vindicator.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, 0));
+                    plugin.getNmsAccesor().setMaxHealth(vindicator, plugin.getNmsAccesor().getMaxHealth(vindicator) * 2, true);
+                }
+            }
+
+            if (eventEntityType == EntityType.WOLF) {
+                event.setCancelled(true);
+                plugin.getNmsHandler().spawnNMSEntity("Cat", EntityType.CAT, event.getLocation(), CreatureSpawnEvent.SpawnReason.NATURAL);
+            }
+
+            if (eventEntityType == EntityType.CAT || eventEntityType == EntityType.OCELOT) {
+                if (plugin.getDays() < 50) {
+                    entity.setCustomName(plugin.format("&6Gato Supernova"));
+                    explodeCat(entity);
+                } else {
+                    if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) {
+                        explodeCat(event.getEntity());
+                    } else {
+                        event.getEntity().setCustomName(plugin.format("&6Gato Galáctico"));
+                    }
+                }
+            }
+
+            if (entity instanceof Cow || entity instanceof Sheep || entity instanceof Pig || entity instanceof MushroomCow) {
+                if (!event.getLocation().getWorld().getName().equalsIgnoreCase(plugin.world.getName())) return;
+
+                if (plugin.getDays() < 50 && plugin.getDays() >= 40) {
+                    event.setCancelled(true);
+                    plugin.getNmsHandler().spawnNMSEntity("Ravager", EntityType.RAVAGER, event.getLocation(), CreatureSpawnEvent.SpawnReason.NATURAL);
+                }
+
+                if (plugin.getDays() >= 50) {
+                    event.setCancelled(true);
+                    Ravager ultraRavager = (Ravager) plugin.getNmsHandler().spawnNMSCustomEntity("PigmanJockeys.UltraRavager", EntityType.RAVAGER, event.getLocation(), CreatureSpawnEvent.SpawnReason.CUSTOM);
+                    ultraRavager.setCustomName(plugin.format("&6Ultra Ravager"));
+                    ultraRavager.setCustomNameVisible(true);
+                    ultraRavager.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+                    ultraRavager.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, 1));
+                    plugin.getNmsAccesor().setMaxHealth(ultraRavager, 500.0D, true);
+                }
+            }
+
+            if (entity instanceof Chicken) {
+                if (plugin.getDays() < 50 && plugin.getDays() >= 40) {
+                    event.setCancelled(true);
+                    plugin.getNmsHandler().spawnNMSEntity("Ravager", EntityType.RAVAGER, event.getLocation(), CreatureSpawnEvent.SpawnReason.NATURAL);
+                    return;
+                }
+                if (plugin.getDays() >= 50) {
+                    event.setCancelled(true);
+                    event.getLocation().getWorld().spawnEntity(event.getLocation(), EntityType.SILVERFISH);
+                }
+            }
+
+            if (entity instanceof Witch) {
+
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+                plugin.getNmsAccesor().setMaxHealth(entity, entity.getHealth() * 2, true);
+
+                entity.setCustomName(plugin.format("&6Bruja Imposible"));
+            }
+        }
+
+        if (plugin.getDays() >= 50) {
+
+            if (entity instanceof Vindicator) {
+                Illager i = (Illager) entity;
+                i.getEquipment().setItemInMainHand(new ItemBuilder(Material.DIAMOND_AXE).addEnchant(Enchantment.DAMAGE_ALL, 5).build());
+            }
+
+            if (event.getEntityType() == EntityType.VEX) {
+                entity.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, 2));
+            }
+
+            if (event.getEntityType() == EntityType.BLAZE) {
+                plugin.getNmsAccesor().setMaxHealth(entity, 200.0D, true);
+            }
+
+            if (entity.getType() == EntityType.COD) {
+                if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) return;
+                Cod cod = (Cod) entity;
+                cod.getEquipment().setItemInMainHand(new ItemBuilder(Material.WOODEN_SWORD).addEnchant(Enchantment.DAMAGE_ALL, 50).addEnchant(Enchantment.KNOCKBACK, 100).build());
+                cod.getEquipment().setItemInMainHandDropChance(0.0f);
+                cod.setCustomName(plugin.format("&6Bacalao de la Muerte"));
+            }
+
+            if (entity.getType() == EntityType.DROWNED) {
+                entity.getEquipment().setItemInMainHand(new ItemStack(Material.TRIDENT));
+            }
+
+            if (entity.getType() == EntityType.SALMON) {
+                event.setCancelled(true);
+                if (world.getNearbyEntities(location, 15, 15, 15).stream().filter(entity1 -> entity1 instanceof PufferFish).map(PufferFish.class::cast).collect(Collectors.toList()).size() < 2) {
+                    event.getLocation().getWorld().spawnEntity(event.getLocation(), EntityType.PUFFERFISH);
+                }
+            }
+
+            if (entity.getType() == EntityType.PUFFERFISH) {
+                PufferFish fish = (PufferFish) entity;
+                fish.setCustomName(plugin.format("&6Pufferfish invulnerable"));
+                fish.setInvulnerable(true);
+            }
+
+            if (entity.getType() == EntityType.WITHER_SKELETON) {
+
+                WitherSkeleton skeleton = (WitherSkeleton) entity;
+                EntityEquipment eq = skeleton.getEquipment();
+
+                int prob = random.nextInt((plugin.getDays() < 60 ? 50 : 13)) + 1;
+
+                if (skeleton.getWorld().getEnvironment() == World.Environment.NETHER && prob == 5) {
+
+                    plugin.getNmsAccesor().setMaxHealth(skeleton, 80.0D, true);
+
+                    skeleton.setCustomName(plugin.format("&6Wither Skeleton Emperador"));
+                    skeleton.setCollidable(false);
+
+                    ItemStack i = new ItemStack(Material.BLACK_BANNER, 1);
+                    BannerMeta m = (BannerMeta)i.getItemMeta();
+                    java.util.List<Pattern> patterns = new ArrayList<>();
+
+                    patterns.add(new Pattern(DyeColor.YELLOW, PatternType.STRAIGHT_CROSS));
+                    patterns.add(new Pattern(DyeColor.BLACK, PatternType.BRICKS));
+                    patterns.add(new Pattern(DyeColor.BLACK, PatternType.STRIPE_MIDDLE));
+                    patterns.add(new Pattern(DyeColor.YELLOW, PatternType.FLOWER));
+                    patterns.add(new Pattern(DyeColor.BLACK, PatternType.TRIANGLE_TOP));
+                    patterns.add(new Pattern(DyeColor.RED, PatternType.GRADIENT_UP));
+                    m.setPatterns(patterns);
+                    i.setItemMeta(m);
+
+                    eq.setHelmet(i);
+                    eq.setHelmetDropChance(0);
+                    eq.setChestplate(new ItemStack(Material.GOLDEN_CHESTPLATE));
+                    eq.setLeggings(new ItemStack(Material.GOLDEN_LEGGINGS));
+                    eq.setBoots(new ItemStack(Material.GOLDEN_BOOTS));
+                    eq.setItemInMainHand(new ItemBuilder(Material.BOW).addEnchant(Enchantment.ARROW_KNOCKBACK, 5).addEnchant(Enchantment.ARROW_DAMAGE, 100).build());
+                    eq.setItemInMainHandDropChance(0);
+
+                    event.setCancelled(false);
+                }
+            }
+
+            if (entity.getType() == EntityType.ZOMBIE) {
+
+                boolean b = false;
+
+                if (VersionManager.isRunning14()) {
+                    b = event.getLocation().getWorld().getBiome((int) event.getLocation().getX(), (int) event.getLocation().getZ()) == Biome.PLAINS;
+                } else {
+                    try {
+                        b = (boolean) World.class.getDeclaredMethod("getBiome", int.class, int.class, int.class).invoke(event.getLocation().getWorld(), (int) event.getLocation().getX(), (int) event.getLocation().getY(), (int) event.getLocation().getZ());
+                    } catch (Exception x) {}
+                }
+
+                if (b) {
+
+                    int prob = 1;
+
+                    if (plugin.getDays() < 60) {
+
+                        prob = random.nextInt(500) + 1;
+                    } else {
+
+                        prob = random.nextInt(125) + 1;
+                    }
+
+                    if (event.getLocation().distance(event.getLocation().getWorld().getHighestBlockAt(event.getLocation()).getLocation()) <= 3) {
+
+                        if (prob == 5) {
+
+                            plugin.getNmsHandler().spawnNMSCustomEntity("CustomGiant", EntityType.GIANT, event.getLocation(), CreatureSpawnEvent.SpawnReason.CUSTOM);
+                            event.setCancelled(true);
+                        }
+                    }
+                }
+            }
+
+            if (entity instanceof Ravager) {
+                if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.CUSTOM) return;
+                if (plugin.getDays() >= 50) {
+
+                    if (entity.getWorld().getName().equalsIgnoreCase(plugin.world.getName())) {
+
+                        Ravager ultraRavager = (Ravager) plugin.getNmsHandler().spawnNMSCustomEntity("PigmanJockeys.UltraRavager", EntityType.RAVAGER, event.getLocation(), CreatureSpawnEvent.SpawnReason.CUSTOM);
+                        ultraRavager.setCustomName(plugin.format("&6Ultra Ravager"));
+                        ultraRavager.setCustomNameVisible(true);
+                        ultraRavager.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+                        ultraRavager.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, 1));
+                        plugin.getNmsAccesor().setMaxHealth(ultraRavager, 500.0D, true);
+
+                        event.setCancelled(true);
+                    }
+                }
+            }
+        }
+
+        if (plugin.getDays() >= 60) {
+
+            if (event.getEntityType() == EntityType.VEX) {
+                Vex v = (Vex) entity;
+                v.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, 2));
+                v.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(7.0D);
+            }
+
+            if (event.getEntityType() == EntityType.VILLAGER) {
+                event.setCancelled(true);
+                if (random.nextBoolean()) {
+                    event.getLocation().getWorld().spawn(event.getLocation(), Vindicator.class);
+                } else {
+                    event.getLocation().getWorld().spawn(event.getLocation(), Vex.class);
+                }
+            }
+
+            if (eventEntityType == EntityType.VINDICATOR) {
+                if (random.nextBoolean()) {
+                    event.setCancelled(true);
+                    if (world.getNearbyEntities(location, 15, 15, 15).stream().filter(entity1 -> entity1 instanceof Evoker).map(Evoker.class::cast).collect(Collectors.toList()).size() < 5) {
+                        Evoker evoker = (Evoker) event.getLocation().getWorld().spawnEntity(event.getLocation(), EntityType.EVOKER);
+                        plugin.getNmsAccesor().setMaxHealth(evoker, plugin.getNmsAccesor().getMaxHealth(evoker) * 2, true);
+                        evoker.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, 2));
+                    }
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onChunkLoad(ChunkLoadEvent e) {
+        if (plugin.getConfig().getBoolean("Toggles.Replace-Mobs-On-Chunk-Load")) {
+            for (LivingEntity liv : Arrays.stream(e.getChunk().getEntities()).filter(entity -> entity instanceof LivingEntity).map(LivingEntity.class::cast).collect(Collectors.toList())) {
+                applyDayChanges(liv);
+            }
+        }
+
+        if (plugin.getDays() >= 40 && plugin.getDays() < 50) {
+            for (LivingEntity cats : Arrays.stream(e.getChunk().getEntities()).filter(entity -> isACat(entity)).map(LivingEntity.class::cast).collect(Collectors.toList())) {
+                cats.setCustomName(plugin.format("&6Gato Supernova"));
+                explodeCat(cats);
+            }
+
+            for (Wolf wolf : Arrays.stream(e.getChunk().getEntities()).filter(entity -> entity instanceof Wolf).map(Wolf.class::cast).collect(Collectors.toList())) {
+                Cat cat = wolf.getWorld().spawn(wolf.getLocation().clone(), Cat.class);
+                wolf.remove();
+                cat.setAdult();
+                cat.setCustomName(plugin.format("&6Gato Supernova"));
+                explodeCat(cat);
+            }
+        }
+    }
+
+    private boolean isACat(Entity entity) {
+        return entity.getType() == EntityType.CAT || entity.getType() == EntityType.OCELOT;
+    }
+
+    public void applyDayChanges(LivingEntity entity) {
+
+        if (plugin.getDays() >= 30) {
+            if (entity instanceof Squid) {
+                entity.remove();
+                Guardian g = (Guardian) entity.getWorld().spawnEntity(entity.getLocation(), EntityType.GUARDIAN);
+                g.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+            }
+            if (entity instanceof Bat) {
+                entity.remove();
+                Blaze g = (Blaze) entity.getWorld().spawnEntity(entity.getLocation(), EntityType.BLAZE);
+                g.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, Integer.MAX_VALUE, 1));
+            }
+        }
+
+        if (plugin.getDays() >= 40) {
+            if (entity instanceof Cow || entity instanceof Sheep || entity instanceof Pig || entity instanceof MushroomCow) {
+                if (!entity.getLocation().getWorld().getName().equalsIgnoreCase(plugin.world.getName())) return;
+
+                if (plugin.getDays() < 50 && plugin.getDays() >= 40) {
+                    entity.remove();
+                    plugin.getNmsHandler().spawnNMSEntity("Ravager", EntityType.RAVAGER, entity.getLocation(), CreatureSpawnEvent.SpawnReason.NATURAL);
+                }
+
+                if (plugin.getDays() >= 50) {
+                    entity.remove();
+                    Ravager ultraRavager = (Ravager) plugin.getNmsHandler().spawnNMSCustomEntity("PigmanJockeys.UltraRavager", EntityType.RAVAGER, entity.getLocation(), CreatureSpawnEvent.SpawnReason.CUSTOM);
+                    ultraRavager.setCustomName(plugin.format("&6Ultra Ravager"));
+                    ultraRavager.setCustomNameVisible(true);
+                    ultraRavager.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+                    ultraRavager.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, 1));
+                    plugin.getNmsAccesor().setMaxHealth(ultraRavager, 500.0D, true);
+                }
+            }
+
+            if (entity instanceof Chicken) {
+
+                if (plugin.getDays() < 50 && plugin.getDays() >= 40) {
+                    entity.remove();
+                    plugin.getNmsHandler().spawnNMSEntity("Ravager", EntityType.RAVAGER, entity.getLocation(), CreatureSpawnEvent.SpawnReason.NATURAL);
+                    return;
+                }
+
+                if (plugin.getDays() >= 50) {
+                    entity.getLocation().getWorld().spawnEntity(entity.getLocation(), EntityType.SILVERFISH);
+                    entity.remove();
+                }
+            }
+        }
+
+        if (plugin.getDays() >= 60) {
+            if (entity.getType() == EntityType.VILLAGER) {
+
+                if (random.nextBoolean()) {
+                    entity.getWorld().spawn(entity.getLocation(), Vex.class);
+                } else {
+                    entity.getWorld().spawn(entity.getLocation(), Vindicator.class);
+                }
+                entity.remove();
+            }
+        }
+    }
+    private void addMobEffects(LivingEntity entity, int force) {
+
+        if (plugin.getDays() < 10) return;
+
+        ArrayList<String> effectList = new ArrayList<>();
+
+        effectList.add("SPEED;2");
+        effectList.add("REGENERATION;3");
+        effectList.add("INCREASE_DAMAGE;3");
+        effectList.add("INVISIBILITY;0");
+        effectList.add("JUMP;4");
+        effectList.add("SLOW_FALLING;0");
+        effectList.add("DAMAGE_RESISTANCE;2");
+        if (plugin.getDays() < 50) effectList.add("GLOWING;0");
+
+        int times = force == 100 ? plugin.getDays() < 25 ? random.nextInt(plugin.getDays() < 20 ? 3 : 4) + 1 : 5 : force;
+
+        for (int i = 0; i < times; i++) {
+
+            String[] s = effectList.get(random.nextInt(effectList.size())).split(";");
+
+            PotionEffectType type = PotionEffectType.getByName(s[0]);
+            int lvl = Integer.parseInt(s[1]);
+
+            if (entity.hasPotionEffect(type)) {
+                i--;
+                return;
+            }
+
+            entity.addPotionEffect(new PotionEffect(type, Integer.MAX_VALUE, lvl));
+        }
+
+        if (Main.DEBUG) {
+            Bukkit.broadcastMessage("Efectos: " + times);
+
+            for (PotionEffect p : entity.getActivePotionEffects()) {
+                Bukkit.broadcastMessage(p.getType().getName());
+            }
+        }
+    }
+    private void spawnSkeletonClass(LivingEntity liv, Location l) {
+
+        int bound = (plugin.getDays() < 60 ? 5 : 7) + 1;
+        int randomClass = random.nextInt(bound);
+
+        LivingEntity spider = null;
+        Skeleton skeleton = null;
+        World w = l.getWorld();
+
+        if (liv instanceof Spider) {
+            if (randomClass == 5 || randomClass == 2) {
+                skeleton = w.spawn(l, WitherSkeleton.class);
+            } else {
+                skeleton = w.spawn(l, Skeleton.class);
+            }
+            spider = liv;
+        } else if (liv instanceof Skeleton) {
+            skeleton = (Skeleton) liv;
+
+            if (randomClass == 5 || randomClass == 2) {
+                skeleton.remove();
+                skeleton = w.spawn(l, WitherSkeleton.class);
+            }
+        }
+
+        EntityEquipment eq = skeleton.getEquipment();
+
+        ItemStack helmet = null;
+        ItemStack chestplate = null;
+        ItemStack legs = null;
+        ItemStack boots = null;
+
+        ItemStack mainHand = null;
+        ItemStack offHand = null;
+        Float mainDrop = 0.0f;
+        Float offDrop = 0.0f;
+        Float armorDropChance = 8.5f;
+
+        Enchantment armorEnchant = null;
+        int armorEnchantLvl = 0;
+
+        Double health = 20.0D;
+        String name = "";
+        String id = "";
+
+        if (plugin.getDays() >= 30) offHand = getPotionItemStack();
+
+        if (plugin.getDays() >= 60 && random.nextInt(101) == 1) {
+
+            if (skeleton != null) {
+                skeleton.remove();
+            }
+
+            skeleton = w.spawn(l, WitherSkeleton.class);
+            skeleton.getEquipment().setItemInMainHand(buildItem(Material.BOW).addEnchant(Enchantment.ARROW_DAMAGE, 32765).build());
+            skeleton.getEquipment().setItemInMainHandDropChance(0.0f);
+
+            skeleton.setRemoveWhenFarAway(false);
+            skeleton.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+            id = "skeleton_definitivo";
+            name = "&6Ultra Esqueleto Definitivo";
+            plugin.getNmsAccesor().setMaxHealth(skeleton, 400.0D, true);
+        } else {
+
+            if (randomClass == 1) {
+                helmet = buildItem(Material.DIAMOND_HELMET).build();
+                chestplate = buildItem(Material.DIAMOND_CHESTPLATE).build();
+                legs = buildItem(Material.DIAMOND_LEGGINGS).build();
+                boots = buildItem(Material.DIAMOND_BOOTS).build();
+                mainHand = buildItem(Material.BOW).build();
+
+                health = (plugin.getDays() < 30 ? 20.0D : plugin.getDays() < 50 ? 40.0D : 100.0D);
+
+                if (plugin.getDays() >= 30) {
+                    armorEnchant = Enchantment.PROTECTION_ENVIRONMENTAL;
+                    armorEnchantLvl = plugin.getDays() < 60 ? 4 : 5;
+                    if (plugin.getDays() >= 60) armorDropChance = 0.0f;
+                }
+            } else if (randomClass == 2) {
+                helmet = buildItem(Material.CHAINMAIL_HELMET).build();
+                chestplate = buildItem(Material.CHAINMAIL_CHESTPLATE).build();
+                legs = buildItem(Material.CHAINMAIL_LEGGINGS).build();
+                boots = buildItem(Material.CHAINMAIL_BOOTS).build();
+
+                int punch_level = (plugin.getDays() < 30 ? 20 : plugin.getDays() < 50 ? 30 : 50);
+                int actual_tactical_power_level = (plugin.getDays() < 50 ? 25 : plugin.getDays() < 60 ? 40 : 110); // Día 30
+
+                health = (plugin.getDays() < 60 ? 40.0D : 60.0D);
+                mainHand = buildItem(Material.BOW).addEnchant(Enchantment.ARROW_KNOCKBACK, punch_level).build();
+
+                if (plugin.getDays() >= 30) {
+                    mainHand = new ItemBuilder(mainHand).addEnchant(Enchantment.ARROW_DAMAGE, actual_tactical_power_level).build();
+                }
+            } else if (randomClass == 3) {
+                helmet = buildItem(Material.IRON_HELMET).build();
+                chestplate = buildItem(Material.IRON_CHESTPLATE).build();
+                legs = buildItem(Material.IRON_LEGGINGS).build();
+                boots = buildItem(Material.IRON_BOOTS).build();
+
+                int fire_aspect_level = (plugin.getDays() < 30 ? 2 : plugin.getDays() < 50 ? 10 : 20);
+                int infernal_skeleton_axe_sharpness = plugin.getDays() < 60 ? 25 : 100;
+                Material material = (plugin.getDays() < 30 ? Material.IRON_AXE : Material.DIAMOND_AXE);
+
+                mainHand = buildItem(material).addEnchant(Enchantment.FIRE_ASPECT, fire_aspect_level).build();
+                health = (plugin.getDays() < 30 ? 20.0D : plugin.getDays() < 60 ? 40.0D : 100.0D);
+
+                if (plugin.getDays() >= 50) {
+                    mainHand = new ItemBuilder(mainHand).addEnchant(Enchantment.DAMAGE_ALL, infernal_skeleton_axe_sharpness).build();
+                }
+            } else if (randomClass == 4) {
+                helmet = buildItem(Material.GOLDEN_HELMET).build();
+                chestplate = buildItem(Material.GOLDEN_CHESTPLATE).build();
+                legs = buildItem(Material.GOLDEN_LEGGINGS).build();
+                boots = buildItem(Material.GOLDEN_BOOTS).build();
+
+                int crossbow_sharp_level = (plugin.getDays() < 30 ? 20 : plugin.getDays() < 50 ? 25 : plugin.getDays() < 60 ? 50 : 100);
+
+                mainHand = buildItem(Material.CROSSBOW).addEnchant(Enchantment.DAMAGE_ALL, crossbow_sharp_level).build();
+                health = plugin.getDays() < 60 ? 40.0D : 60.0D;
+
+                if (plugin.getDays() >= 30) {
+                    skeleton.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, (plugin.getDays() < 60 ? 1 : 3)));
+                }
+            } else if (randomClass == 5) {
+                helmet = new LeatherArmorBuilder(Material.LEATHER_HELMET, 1).setColor(Color.fromRGB(0xFF0000)).build();
+                chestplate = new LeatherArmorBuilder(Material.LEATHER_CHESTPLATE, 1).setColor(Color.fromRGB(0xFF0000)).build();
+                legs = new LeatherArmorBuilder(Material.LEATHER_LEGGINGS, 1).setColor(Color.fromRGB(0xFF0000)).build();
+                boots = new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.fromRGB(0xFF0000)).build();
+                armorDropChance = 0.0f;
+
+                int bow_power_level = (plugin.getDays() < 30 ? 10 : plugin.getDays() < 50 ? 50 : plugin.getDays() < 60 ? 60 : 150);
+
+                mainHand = buildItem(Material.BOW).addEnchant(Enchantment.ARROW_DAMAGE, bow_power_level).build();
+                health = plugin.getDays() < 60 ? 40.0D : 60.0D;
+            } else if (randomClass == 6) {
+                helmet = new LeatherArmorBuilder(Material.LEATHER_HELMET, 1).setColor(Color.BLUE).build();
+                chestplate = new LeatherArmorBuilder(Material.LEATHER_CHESTPLATE, 1).setColor(Color.BLUE).build();
+                legs = new LeatherArmorBuilder(Material.LEATHER_LEGGINGS, 1).setColor(Color.BLUE).build();
+                boots = new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.BLUE).build();
+                mainHand = buildItem(Material.BOW).build();
+
+                armorDropChance = 0.0f;
+                name = plugin.format("&6Ultra Esqueleto Demoníaco");
+                id = "demon_skeleton";
+
+                health = 100.0D;
+
+            } else if (randomClass == 7) {
+                helmet = new LeatherArmorBuilder(Material.LEATHER_HELMET, 1).setColor(Color.GREEN).build();
+                chestplate = new LeatherArmorBuilder(Material.LEATHER_CHESTPLATE, 1).setColor(Color.GREEN).build();
+                legs = new LeatherArmorBuilder(Material.LEATHER_LEGGINGS, 1).setColor(Color.GREEN).build();
+                boots = new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.GREEN).build();
+                mainHand = buildItem(Material.BOW).build();
+                offHand = getPotionItemStack2();
+                armorDropChance = 0.0f;
+                health = 100.0D;
+                name = "&6Ultra Esqueleto Científico";
+            } else {
+                helmet = buildItem(Material.DIAMOND_HELMET).build();
+                chestplate = buildItem(Material.DIAMOND_CHESTPLATE).build();
+                legs = buildItem(Material.DIAMOND_LEGGINGS).build();
+                boots = buildItem(Material.DIAMOND_BOOTS).build();
+                mainHand = buildItem(Material.BOW).build();
+
+                health = (plugin.getDays() < 30 ? 20.0D : plugin.getDays() < 50 ? 40.0D : 100.0D);
+
+                if (plugin.getDays() >= 30) {
+                    armorEnchant = Enchantment.PROTECTION_ENVIRONMENTAL;
+                    armorEnchantLvl = plugin.getDays() < 60 ? 4 : 5;
+                    if (plugin.getDays() >= 60) armorDropChance = 0.0f;
+                }
+            }
+        }
+
+        if (armorEnchant != null) {
+            helmet = new ItemBuilder(helmet).addEnchant(armorEnchant, armorEnchantLvl).build();
+            chestplate = new ItemBuilder(chestplate).addEnchant(armorEnchant, armorEnchantLvl).build();
+            legs = new ItemBuilder(legs).addEnchant(armorEnchant, armorEnchantLvl).build();
+            boots = new ItemBuilder(boots).addEnchant(armorEnchant, armorEnchantLvl).build();
+        }
+
+        if (helmet != null) eq.setHelmet(helmet);
+        if (chestplate != null) eq.setChestplate(chestplate);
+        if (legs != null) eq.setLeggings(legs);
+        if (boots != null) eq.setBoots(boots);
+
+        if (mainHand != null) eq.setItemInMainHand(mainHand);
+        if (offHand != null) eq.setItemInOffHand(offHand);
+        if (!name.isEmpty()) skeleton.setCustomName(plugin.format(name));
+        if (!id.isEmpty()) skeleton.getPersistentDataContainer().set(new NamespacedKey(plugin, id), PersistentDataType.BYTE, (byte) 1);
+        setMaxHealth(skeleton, health);
+        skeleton.setHealth(health);
+
+        eq.setItemInMainHandDropChance(mainDrop);
+        eq.setItemInOffHandDropChance(offDrop);
+
+        eq.setHelmetDropChance(armorDropChance);
+        eq.setChestplateDropChance(armorDropChance);
+        eq.setLeggingsDropChance(armorDropChance);
+        eq.setBootsDropChance(armorDropChance);
+
+        if (spider != null) {
+            spider.addPassenger(skeleton);
+        }
+    }
+    private void spawnNetheriteMob(CreatureSpawnEvent event) {
+
+        if (plugin.getDays() < 25) return;
+
+        if (event.getEntityType() == EntityType.SLIME) {
+            if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SLIME_SPLIT) {
+                return;
+            }
+
+            Slime slime = (Slime) event.getEntity();
+            Double health = (plugin.getDays() < 50 ? slime.getHealth() * 2 : slime.getHealth() * 4);
+
+            slime.setSize((plugin.getDays() < 50) ? 15 : 16);
+            plugin.getNmsAccesor().setMaxHealth(slime, health, true);
+            slime.setCustomName(ChatColor.GOLD + "GIGA Slime");
+        }
+
+        if (event.getEntityType() == EntityType.MAGMA_CUBE) {
+
+            if (event.getSpawnReason() == CreatureSpawnEvent.SpawnReason.SLIME_SPLIT) {
+                return;
+            }
+            int size = (plugin.getDays() < 50 ? 16 : 17);
+
+            // Límite de 10 Giga MagmaCubes
+            if (event.getLocation().getWorld().getEntitiesByClass(MagmaCube.class).stream().filter(entity -> entity.getSize() == size).collect(Collectors.toList()).size() >= 10) {
+                event.setCancelled(true);
+                return;
+            }
+
+
+            MagmaCube magmaCube = (MagmaCube) event.getEntity();
+
+            magmaCube.setSize(size);
+            magmaCube.setCustomName(ChatColor.GOLD + "GIGA MagmaCube");
+
+            if (plugin.getDays() >= 50) {
+                plugin.getNmsAccesor().setMaxHealth(magmaCube, plugin.getNmsAccesor().getMaxHealth(magmaCube) * 2, true);
+            }
+        }
+
+        if (event.getEntityType() == EntityType.GHAST) {
+            if (event.getLocation().getWorld().getEnvironment() != World.Environment.THE_END && event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM) {
+
+                if (plugin.getDays() < 40) {
+                    Double health = ThreadLocalRandom.current().nextDouble(40, 60 + 1);
+
+                    LivingEntity GhastDemon = event.getEntity();
+                    plugin.getNmsAccesor().setMaxHealth(GhastDemon, health, true);
+                    GhastDemon.setHealth(health);
+                    GhastDemon.setCustomName(ChatColor.GOLD + "Ghast Demoníaco");
+                } else {
+
+                    int r = random.nextInt(100) + 1;
+
+                    Double HPGenerator = ThreadLocalRandom.current().nextDouble(40, 60 + 1);
+                    LivingEntity GhastDemon = event.getEntity();
+                    plugin.getNmsAccesor().setMaxHealth(GhastDemon, HPGenerator, true);
+                    GhastDemon.setHealth(HPGenerator);
+
+                    if (r <= 75) {
+                        GhastDemon.setCustomName(ChatColor.GOLD + "Demonio flotante");
+                        GhastDemon.getPersistentDataContainer().set(new NamespacedKey(plugin, "demonio_flotante"), PersistentDataType.BYTE, (byte) 1);
+                    } else {
+                        GhastDemon.setCustomName(ChatColor.GOLD + "Ghast Demoníaco");
+                        GhastDemon.getPersistentDataContainer().set(new NamespacedKey(plugin, "ghast_demoniaco"), PersistentDataType.BYTE, (byte) 1);
+                    }
+                }
+            }
+        }
+    }
+    public void explodeCat(LivingEntity cat) {
+        if (this.gatosSupernova.contains(cat)) return;
+        this.gatosSupernova.add(cat);
+
+        boolean canContinue = true;
+
+        if (Bukkit.getOnlinePlayers().size() == 0) canContinue = false;
+        if (gatosSupernova.size() > 2) canContinue = false;
+
+        if (!canContinue) {
+            cat.remove();
+            return;
+        }
+
+        final World w = cat.getWorld();
+        final Location loc = cat.getLocation().clone();
+        final Chunk chunk = loc.getChunk();
+
+        if (!chunk.isForceLoaded()) chunk.setForceLoaded(true);
+        if (!chunk.isLoaded()) chunk.load();
+
+        Bukkit.broadcastMessage(plugin.format("&cUn gato supernova va a explotar en: " + loc.getBlockX() + " " + loc.getBlockY() + " " + loc.getBlockZ() +" (" + cat.getWorld().getName() + ")."));
+        Bukkit.getServer().getScheduler().runTaskLater(plugin, new Runnable() {
+            @Override
+            public void run() {
+                if (cat == null) {
+                    if (chunk.isForceLoaded()) chunk.setForceLoaded(false);
+                    if (chunk.isLoaded()) chunk.unload();
+                    return;
+                }
+                if (!gatosSupernova.contains(cat)) {
+                    if (chunk.isForceLoaded()) chunk.setForceLoaded(false);
+                    if (chunk.isLoaded()) chunk.unload();
+                    return;
+                }
+
+                float power = Float.valueOf(plugin.getConfig().getInt("Toggles.Gatos-Supernova.Explosion-Power"));
+                boolean breakBlocks = plugin.getConfig().getBoolean("Toggles.Gatos-Supernova.Destruir-Bloques");
+                boolean placeFire = plugin.getConfig().getBoolean("Toggles.Gatos-Supernova.Fuego");
+
+                w.createExplosion(loc, power, placeFire, breakBlocks, cat);
+                gatosSupernova.remove(cat);
+                cat.remove();
+
+                if (chunk.isForceLoaded()) chunk.setForceLoaded(false);
+                if (chunk.isLoaded()) chunk.unload();
+            }
+        }, 20*30);
+    }
+
+    @EventHandler
+    public void onDeath(EntityDeathEvent event) {
+
+        if (plugin.getDays() >= 20) {
+
+            LivingEntity mob = event.getEntity();
+
+            if (plugin.getDays() < 40) {
+                if (mob instanceof IronGolem || mob.getType() == PIGMAN || mob instanceof Ghast || mob instanceof Guardian || mob instanceof Enderman || mob instanceof Witch || mob instanceof WitherSkeleton || mob instanceof Evoker || mob instanceof Phantom || mob instanceof Slime || mob instanceof Drowned || mob instanceof Blaze) {
+                    event.getDrops().clear();
+                }
+
+                if (event.getEntity().getKiller() == null) return;
+                Player killer = event.getEntity().getKiller();
+                if (mob instanceof Ravager) {
+
+                    int prob = random.nextInt(100) + 1;
+                    int needed = 1;
+
+                    if (plugin.getDays() >= 25) {
+
+                        needed = 20;
+                    }
+
+                    int randomSentence = ThreadLocalRandom.current().nextInt(1, 4 + 1);
+
+                    if (prob <= needed) {
+
+                        ItemStack totem = new ItemStack(Material.TOTEM_OF_UNDYING, 1, (short) 3);
+                        mob.getWorld().dropItem(mob.getLocation(), totem);
+
+                        killer.sendMessage(ChatColor.YELLOW + "¡Un tótem!");
+                        killer.playSound(killer.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 10, -5);
+
+                    } else if (randomSentence == 1) {
+                        assert killer != null;
+                        killer.sendMessage(ChatColor.RED + "Vaya que mala suerte, ese ravager no tenia nada :(");
+                    } else if (randomSentence == 2) {
+                        assert killer != null;
+                        killer.sendMessage(ChatColor.RED + "¡Porras... otro ravager sin suerte!");
+                    } else if (randomSentence == 3) {
+                        assert killer != null;
+                        killer.sendMessage(ChatColor.RED + "Nada... hoy no hay totem :(");
+                    } else if (randomSentence == 4) {
+                        assert killer != null;
+                        killer.sendMessage(ChatColor.RED + "¡Hoy no es tu día!");
+                    }
+                }
+            } else {
+
+                if (mob instanceof IronGolem || mob instanceof Ghast || mob instanceof Guardian || mob instanceof Enderman || mob instanceof Witch || mob instanceof WitherSkeleton || mob instanceof Evoker || mob instanceof Phantom || mob instanceof Slime || mob instanceof Drowned || mob instanceof Blaze) {
+                    event.getDrops().clear();
+                }
+
+                if (event.getEntityType() == EntityType.CAT || event.getEntityType() == EntityType.OCELOT) {
+
+                    if (gatosSupernova.contains(event.getEntity())) gatosSupernova.remove(event.getEntity());
+                    if (event.getEntity().getCustomName() == null) return;
+                    if (event.getEntity().getCustomName().contains(plugin.format("&6Gato Gal"))) {
+
+                        Location l = event.getEntity().getLocation();
+                        int x = (int) l.getX();
+                        int y = (int) l.getY();
+                        int z = (int) l.getZ();
+
+                        Bukkit.broadcastMessage(plugin.format("&cLa maldición de un Gato Galáctico ha comenzado en: " + x + ", " + y + ", " + z));
+                        new GatoGalacticoTask(event.getEntity().getLocation(), plugin).runTaskTimer(plugin, 0, 20L);
+                    }
+                }
+
+                if (mob.getType() == PIGMAN) {
+                    if (mob.getCustomName() == null) {
+                        event.getDrops().clear();
+                        return;
+                    }
+
+                    if (mob.getCustomName().equalsIgnoreCase(ChatColor.GREEN + "Carlos el Esclavo")) {
+                        int r = random.nextInt(100) + 1;
+                        int chance = plugin.getDays() < 60 ? 100 : 33;
+
+                        if (r <= chance) event.getDrops().add(new ItemStack(Material.GOLD_INGOT, 32));
+                    }
+                }
+
+                if (mob instanceof Villager) {
+                    if (mob.getCustomName() == null) return;
+                    if (mob.getCustomName().equalsIgnoreCase(ChatColor.GREEN + "Jess la Emperatriz")) {
+                        int r = random.nextInt(100) + 1;
+                        int prob = 100;
+                        if (plugin.getDays() >= 60) {
+                            prob = 33;
+                        }
+                        if (r <= prob) {
+                            event.getDrops().add(new ItemStack(Material.GOLDEN_APPLE, 2));
+                        }
+                    }
+                }
+
+                if (event.getEntity() instanceof Ravager) {
+
+                    Ravager ravager = (Ravager) event.getEntity();
+                    if (ravager.getCustomName() == null) return;
+                    if (ravager.getCustomName().contains(plugin.format("&6Ultra Ravager"))) {
+                        if (ravager.getWorld().getEnvironment() != World.Environment.NETHER) {
+                            event.getDrops().clear();
+                        } else {
+                            int r = random.nextInt(100) + 1;
+                            int prob = 100;
+                            if (plugin.getDays() >= 60) {
+                                prob = 33;
+                            }
+                            if (r <= prob) {
+
+                                event.getDrops().add(new ItemStack(Material.TOTEM_OF_UNDYING));
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (plugin.getDays() >= 50) {
+                if (event.getEntity().getType() == EntityType.GIANT) {
+                    if (plugin.getDays() < 60) {
+                        event.getDrops().add(new ItemBuilder(Material.BOW).setDisplayName(plugin.format("&bArco de Gigante")).addEnchant(Enchantment.ARROW_DAMAGE, 10).build());
+                    }
+                }
+
+                if (event.getEntity().getType() == EntityType.WITHER_SKELETON) {
+                    if (event.getEntity().getCustomName() == null) return;
+                    if (event.getEntity().getCustomName().contains(plugin.format("&6Wither Skeleton Emperador"))) {
+
+                        if (plugin.getDays() < 60) {
+                            int prob = (int) (Math.random() * 100) + 1;
+                            if (prob <= 50) {
+                                event.getDrops().add(CustomItems.createNetheriteSword());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void spawnUltraRavager(CreatureSpawnEvent event) {
+
+        Ravager ravager = event.getLocation().getWorld().spawn(event.getLocation(), Ravager.class);
+        LivingEntity carlos = (LivingEntity) event.getLocation().getWorld().spawnEntity(event.getLocation(), PIGMAN);
+        Villager jess = event.getLocation().getWorld().spawn(event.getLocation(), Villager.class);
+
+        carlos.addPassenger(jess);
+        ravager.addPassenger(carlos);
+
+        plugin.getNmsAccesor().setMaxHealth(jess, 500.0D, true);
+
+        plugin.getNmsAccesor().setMaxHealth(carlos, 150.0D, true);
+
+        plugin.getNmsAccesor().setMaxHealth(ravager, 240.0D, true);
+
+        jess.setCustomName(ChatColor.GREEN + "Jess la Emperatriz");
+        carlos.setCustomName(ChatColor.GREEN + "Carlos el Esclavo");
+        ravager.setCustomName(ChatColor.GREEN + "Ultra Ravager");
+
+        jess.getEquipment().setItemInMainHand(new ItemStack(Material.GOLDEN_APPLE, 2));
+        jess.getEquipment().setItemInMainHandDropChance(0);
+
+        carlos.getEquipment().setItemInMainHand(new ItemStack(Material.GOLD_INGOT, 32));
+        carlos.getEquipment().setItemInMainHandDropChance(0);
+
+        ravager.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 1));
+        ravager.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, 1));
+        ravager.getPersistentDataContainer().set(new NamespacedKey(plugin, "ultra_ravager"), PersistentDataType.BYTE, (byte) 1);
+
+        event.setCancelled(true);
+    }
+
+    private void spawnBeginningMob(CreatureSpawnEvent e) {
+
+        World beginningWorld = e.getLocation().getWorld();
+        Location location = e.getLocation();
+
+        if (plugin.getDays() < 0) return;
+        if (plugin.getBeginningManager() == null) return;
+        if (plugin.getBeginningManager().getBeginningWorld() == null) return;
+        if (!beginningWorld.getName().equalsIgnoreCase(plugin.getBeginningManager().getBeginningWorld().getName())) return;
+
+        if (e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.SPAWNER && e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.CUSTOM) {
+            e.setCancelled(true);
+            if (beginningWorld.getLivingEntities().size() > 70) {
+                return;
+            }
+
+            int p = random.nextInt(101);
+
+            if (p <= 60) {
+                WitherSkeleton skeleton = (WitherSkeleton) plugin.getNmsHandler().spawnNMSEntity("SkeletonWither", EntityType.WITHER_SKELETON, e.getLocation(), CreatureSpawnEvent.SpawnReason.CUSTOM);
+
+                skeleton.getEquipment().setChestplate(new LeatherArmorBuilder(Material.LEATHER_CHESTPLATE, 1).setColor(Color.fromRGB(255, 182, 193)).build());
+                skeleton.getEquipment().setBoots(new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.fromRGB(255, 182, 193)).build());
+
+                int enchantLevel = (int) (Math.random() * 5) + 1;
+                skeleton.getEquipment().setItemInMainHand(new ItemBuilder(CustomItems.createNetheriteSword()).addEnchant(Enchantment.DAMAGE_ALL, enchantLevel).build());
+
+                skeleton.getEquipment().setChestplateDropChance(0);
+                skeleton.getEquipment().setBootsDropChance(0);
+                skeleton.getEquipment().setItemInMainHandDropChance(0);
+
+                skeleton.setCustomName(plugin.format("&6Wither Skeleton Rosáceo"));
+                skeleton.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 2));
+                plugin.getNmsAccesor().setMaxHealth(skeleton, 100.0D, true);
+            }
+
+            if (p > 60 && p <= 75) {
+                Vex vex = beginningWorld.spawn(location, Vex.class);
+                vex.getEquipment().setHelmet(new ItemBuilder(Material.valueOf("HONEY_BLOCK")).addEnchant(Enchantment.PROTECTION_ENVIRONMENTAL, 4).build());
+                vex.getEquipment().setItemInMainHand(new ItemBuilder(Material.END_CRYSTAL).addEnchant(Enchantment.DAMAGE_ALL, 15).addEnchant(Enchantment.KNOCKBACK, 10).build());
+                vex.getEquipment().setHelmetDropChance(0);
+                vex.getEquipment().setItemInMainHandDropChance(0);
+
+                vex.setCustomName(plugin.format("&6Vex Definitivo"));
+            }
+
+            if (p > 75 && p <= 79) {
+                Ghast ghast = (Ghast) plugin.getNmsHandler().spawnCustomGhast(e.getLocation().add(0, 5, 0), CreatureSpawnEvent.SpawnReason.CUSTOM, true);
+                plugin.getNmsAccesor().setMaxHealth(ghast, 150.0D, true);
+                ghast.setCustomName(plugin.format("&6Ender Ghast Definitivo"));
+            }
+
+            if (p >= 80) {
+                Creeper c = plugin.getFactory().spawnEnderQuantumCreeper(e.getLocation(), null);
+                plugin.getNmsAccesor().setMaxHealth(c, 100.0D, true);
+                c.setExplosionRadius(7);
+            }
+        }
+    }
+
+    private boolean isHostileMob(EntityType type) {
+        if (type == EntityType.BLAZE ||type == EntityType.CREEPER ||type == EntityType.GHAST ||type == EntityType.MAGMA_CUBE ||type == EntityType.SILVERFISH ||type == EntityType.SKELETON ||type == EntityType.SLIME ||type == EntityType.ZOMBIE ||type == EntityType.ZOMBIE_VILLAGER ||type == EntityType.DROWNED ||type == EntityType.WITHER_SKELETON ||type == EntityType.WITCH ||type == EntityType.PILLAGER ||type == EntityType.EVOKER ||type == EntityType.VINDICATOR ||type == EntityType.RAVAGER ||type == EntityType.VEX ||type == EntityType.GUARDIAN ||type == EntityType.ELDER_GUARDIAN ||type == EntityType.SHULKER ||type == EntityType.HUSK ||type == EntityType.STRAY ||type == EntityType.PHANTOM) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public ItemStack getPotionItemStack() {
+        ItemStack arrow = new ItemStack(Material.TIPPED_ARROW);
+        PotionMeta meta = (PotionMeta) arrow.getItemMeta();
+        meta.setBasePotionData(new PotionData(PotionType.INSTANT_DAMAGE, false, true));
+        arrow.setItemMeta(meta);
+        return arrow;
+    }
+
+    public ItemStack getPotionItemStack2() {
+
+        ItemStack arrow = new ItemStack(Material.TIPPED_ARROW);
+        PotionMeta meta = (PotionMeta) arrow.getItemMeta();
+        meta.addCustomEffect(new PotionEffect(PotionEffectType.SLOW, 3*60*20, 2), false);
+        meta.addCustomEffect(new PotionEffect(PotionEffectType.WEAKNESS, 3*60*20, 0), false);
+        meta.addCustomEffect(new PotionEffect(PotionEffectType.GLOWING, 3*60*20, 0), false);
+        meta.addCustomEffect(new PotionEffect(PotionEffectType.POISON, 3*60*20, 2), false);
+        arrow.setItemMeta(meta);
+        return arrow;
+    }
+
+    private Double getMaxHealthOf(LivingEntity entity) {
+        return plugin.getNmsAccesor().getMaxHealth(entity);
+    }
+
+    private void setMaxHealth(Entity entity, Double health) {
+
+        plugin.getNmsAccesor().setMaxHealth(entity, health, false);
+    }
+
+    private ItemBuilder buildItem(Material mat) {
+        return new ItemBuilder(mat);
+    }
+}

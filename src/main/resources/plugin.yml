@@ -1,0 +1,14 @@
+name: PermaDeathCore
+version: ${project.version}
+main: com.permadeathcore.Main
+softdepend: [WorldEdit]
+load: STARTUP
+api-version: 1.14
+authors: [SebazCRC, vo1d_dev, InfernalCore]
+description: Recreación del Plugin "PermaDeath" de la serie de ElRichMC, este plugin no intenta reemplazar al original, solo crear una copia similar para el uso de la comunidad.
+website: http://infernalcore.net
+commands:
+  pdc:
+    description: Comando general
+    aliase: permadeath
+    usage:
