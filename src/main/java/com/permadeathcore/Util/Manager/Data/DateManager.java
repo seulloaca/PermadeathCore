@@ -1,16 +1,14 @@
-package com.permadeathcore.Util.Manager;
+package com.permadeathcore.Util.Manager.Data;
 
 import com.permadeathcore.Discord.DiscordManager;
 import com.permadeathcore.Main;
-import com.permadeathcore.Util.Log.PDCLog;
-import org.bukkit.BanList;
+import com.permadeathcore.Util.Manager.Log.PDCLog;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;

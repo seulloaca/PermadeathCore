@@ -1,5 +1,6 @@
 package com.permadeathcore;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.logging.Filter;
@@ -7,6 +8,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import com.permadeathcore.Discord.DiscordManager;
+import com.permadeathcore.Listener.Player.AnvilListener;
 import com.permadeathcore.Util.Configurations.Messages;
 import com.permadeathcore.Listener.Block.BlockEvents;
 import com.permadeathcore.Listener.Entity.EntityEvents;
@@ -25,11 +27,11 @@ import com.permadeathcore.Listener.Entity.SkeletonClasses;
 import com.permadeathcore.Listener.Entity.SpawnListener;
 import com.permadeathcore.Listener.Player.VoidListeners;
 import com.permadeathcore.Util.Library.UpdateChecker;
-import com.permadeathcore.Util.Log.Log4JFilter;
-import com.permadeathcore.Util.Log.PDCLog;
-import com.permadeathcore.Util.Manager.BeginningDataManager;
-import com.permadeathcore.Util.Manager.EndDataManager;
-import com.permadeathcore.Util.Manager.PlayerDataManager;
+import com.permadeathcore.Util.Manager.Log.Log4JFilter;
+import com.permadeathcore.Util.Manager.Log.PDCLog;
+import com.permadeathcore.Util.Manager.Data.BeginningDataManager;
+import com.permadeathcore.Util.Manager.Data.EndDataManager;
+import com.permadeathcore.Util.Manager.Data.PlayerDataManager;
 import com.permadeathcore.NMS.PeaceToHostileManager;
 import com.permadeathcore.NMS.NMSAccesor;
 import com.permadeathcore.NMS.NMSHandler;
@@ -38,8 +40,7 @@ import com.permadeathcore.TheBeginning.BeginningManager;
 import com.permadeathcore.NMS.NMSFinder;
 import com.permadeathcore.Util.Library.FileAPI;
 import com.permadeathcore.Util.Item.*;
-import com.permadeathcore.Util.Manager.DateManager;
-import com.permadeathcore.Util.Messages.MessageUtil;
+import com.permadeathcore.Util.Manager.Data.DateManager;
 import com.permadeathcore.Util.Manager.RecipeManager;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -49,6 +50,8 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.boss.BarColor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.*;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -73,8 +76,6 @@ public final class Main extends JavaPlugin implements Listener {
     private NMSAccesor nmsAccesor;
 
     private PeaceToHostileManager hostile;
-    private NetheriteDrops drops;
-    private InfernalNetherite infernalNetherite;
     private RecipeManager recipes;
     private CustomBlock netheriteBlock;
 
@@ -107,6 +108,8 @@ public final class Main extends JavaPlugin implements Listener {
     private SpawnListener spawnListener;
     private SplittableRandom r = new SplittableRandom();
 
+    private boolean fo
+
     @Override
     public void onEnable() {
         instance = this;
@@ -118,7 +121,6 @@ public final class Main extends JavaPlugin implements Listener {
 
         tag = format((getConfig().contains("Prefix") ? getConfig().getString("Prefix") : "&c&lPERMADEATH&4&lCORE &7➤ &f"));
 
-        DiscordManager.getInstance();
         tickAll();
 
         this.playTime = getConfig().getInt("DontTouch.PlayTime");
@@ -166,18 +168,30 @@ public final class Main extends JavaPlugin implements Listener {
 
                 if (!loaded) {
 
+                    if (Bukkit.getPluginManager().getPlugin("JDASpigot") != null) {
+                        Bukkit.getConsoleSender().sendMessage(format(tag +"&aSe ha encontrado JDASpigot, cargando bot de Discord."));
+                        DiscordManager.getInstance();
+                    } else {
+                        Bukkit.getConsoleSender().sendMessage(format(tag + "&cNo se ha encontrado JDASpigot, es necesario para utilizar el bot de Discord."));
+                        Bukkit.getConsoleSender().sendMessage(format("&eDescarga aquí: &fhttps://www.dropbox.com/s/qdtqgfgv51lvag4/JDASpigot.jar?dl=0"));
+                        Bukkit.getConsoleSender().sendMessage(format("&eSi no puedes descargarlo allí, únete a este Discord y te daremos acceso al enlace: &ehttps://discord.gg/8evPbuxPke"));
+                    }
+
                     startPlugin();
-                    MessageUtil.setupConfig(instance);
+                    setupConfig();
 
                     if (!getConfig().contains("config-version")) {
+                        PDCLog.getInstance().log("Eliminando config.yml por versión antigua.");
                         getFile().delete();
-                        PDCLog.getInstance().log("Eliminando config.yml");
+                        saveDefaultConfig();
                     } else {
                         try {
                             int version = getConfig().getInt("config-version");
-                            if (version != 1) {
+                            if (version != 2) {
                                 Bukkit.getConsoleSender().sendMessage(format(tag + "&eEstamos eliminando config.yml debido a que está desactualizado."));
+                                PDCLog.getInstance().log("Eliminando config.yml por versión antigua.");
                                 getFile().delete();
+                                saveDefaultConfig();
                             }
                         } catch (Exception x) {
                             getFile().delete();
@@ -215,8 +229,35 @@ public final class Main extends JavaPlugin implements Listener {
 
                 tickEvents();
                 tickPlayers();
+                tickWorlds();
             }
         }, 0, 20L);
+    }
+
+    private void tickWorlds() {
+        if (this.getDays() >= 40) {
+            for (World w : Bukkit.getWorlds().stream().filter(world1 -> world1.getEnvironment() != World.Environment.THE_END).collect(Collectors.toList())) {
+                for (Ravager ravager : w.getEntitiesByClass(Ravager.class)) {
+                    if (ravager.getPersistentDataContainer().has(new NamespacedKey(instance, "ultra_ravager"), PersistentDataType.BYTE)) {
+                        List<Block> b = ravager.getLineOfSight(null, 5);
+
+                        for (Block block : b) {
+                            for (int i = -1; i < 1; i++) {
+                                for (int j = -1; j < 1; j++) {
+                                    for (int k = -1; k < 1; k++) {
+                                        Block r = block.getRelative(i, j, k);
+                                        if (r.getType() == Material.NETHERRACK) {
+                                            r.setType(Material.AIR);
+                                            r.getWorld().playSound(r.getLocation(), Sound.BLOCK_STONE_BREAK, 2.0F, 1.0F);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private void tickPlayers() {
@@ -248,8 +289,8 @@ public final class Main extends JavaPlugin implements Listener {
                 }
             }
 
-            getDrops().setupHealth(player);
-            CustomItems.slotBlock(player);
+            NetheriteArmor.setupHealth(player);
+            PermaDeathItems.slotBlock(player);
 
             if (SPEED_RUN_MODE) {
                 String actionBar = "";
@@ -377,15 +418,12 @@ public final class Main extends JavaPlugin implements Listener {
                     timeForWither = 0;
                 }
                 player.getPersistentDataContainer().set(new NamespacedKey(this, "wither"), PersistentDataType.INTEGER, ++timeForWither);
-
                 if (timeForWither % (60 * 60) == 0 && player.getGameMode() == GameMode.SURVIVAL) {
                     Wither wither = player.getWorld().spawn(player.getLocation().clone().add(0, 5, 0), Wither.class);
                     try {
                         Object nmsw = wither.getClass().getDeclaredMethod("getHandle").invoke(wither);
                         nmsw.getClass().getDeclaredMethod("r", int.class).invoke(nmsw, 100);
                     } catch (Exception x) {}
-
-                    //((CraftWither) wither).getHandle().r(100);
                 }
 
                 if (getConfig().getBoolean("Toggles.Mike-Creeper-Spawn")) {
@@ -397,16 +435,16 @@ public final class Main extends JavaPlugin implements Listener {
                             .filter(entity -> entity instanceof Creeper)
                             .map(Creeper.class::cast)
                             .collect(Collectors.toList()).size() < 10) {
+                        int pX = (r.nextBoolean() ? -1 : 1) * (r.nextInt(15)) + 15;
+                        int pZ = (r.nextBoolean() ? -1 : 1) * (r.nextInt(15)) + 15;
                         int y = (int) l.getY();
-                        while (y < l.getWorld().getMaxHeight() && l.getWorld().getBlockAt((int) l.getX(), y, (int) l.getZ()).getType() != Material.AIR) {
-                            y++;
-                        }
 
-                        int pX = (r.nextBoolean() ? -1 : 1) * r.nextInt(19);
-                        int pZ = (r.nextBoolean() ? -1 : 1) * r.nextInt(19);
-                        if (y == l.getWorld().getMaxHeight() - 1) y = l.getWorld().getHighestBlockYAt(pX, pZ);
-                        Location f = new Location(l.getWorld(), l.getX() + pX, y, l.getZ() + pZ);
-                        getFactory().spawnEnderQuantumCreeper(f, null);
+                        Block block = l.getWorld().getBlockAt(l.getBlockX() + pX, y, l.getBlockZ() + pZ);
+                        Block up = block.getRelative(BlockFace.UP);
+
+                        if (block.getType() != Material.AIR && up.getType() == Material.AIR) {
+                            getFactory().spawnEnderQuantumCreeper(up.getLocation(), null);
+                        }
                     }
                 }
             }
@@ -543,8 +581,7 @@ public final class Main extends JavaPlugin implements Listener {
         Bukkit.getConsoleSender().sendMessage(format("&7> &bEstado de Compatibilidad: " + compatibleVersion));
         Bukkit.getConsoleSender().sendMessage(format("&7> &bSoftware: " + software));
         Bukkit.getConsoleSender().sendMessage(format("&7> &b&lCambios:"));
-        Bukkit.getConsoleSender().sendMessage(format("&7>   &aEstables: &710-50"));
-        Bukkit.getConsoleSender().sendMessage(format("&7>   &eBETA: &760"));
+        Bukkit.getConsoleSender().sendMessage(format("&7>   &aDías: &71-60"));
 
         if (Bukkit.getPluginManager().getPlugin("WorldEdit") == null) {
             Bukkit.getConsoleSender().sendMessage(format("&7> &4&lADVERTENCIA: &7No se ha encontrado el Plugin &7World Edit"));
@@ -578,16 +615,10 @@ public final class Main extends JavaPlugin implements Listener {
 
         String prefix = "&e[PermaDeathCore] &7> ";
 
-        if (this.drops == null) {
+        if (!registeredDays.get(1)) {
+            registeredDays.replace(1, true);
 
-            this.drops = new NetheriteDrops(instance);
-            getServer().getPluginManager().registerEvents(drops, instance);
-        }
-
-        if (this.infernalNetherite == null) {
-
-            this.infernalNetherite = new InfernalNetherite(instance);
-            getServer().getPluginManager().registerEvents(infernalNetherite, instance);
+            this.getServer().getPluginManager().registerEvents(new AnvilListener(this), this);
         }
 
         if (DateManager.getInstance().getDays() >= 20 && !registeredDays.get(20)) {
@@ -654,7 +685,7 @@ public final class Main extends JavaPlugin implements Listener {
 
             this.recipes.registerD60Recipes();
             Bukkit.getConsoleSender().sendMessage(format(prefix + "&eSe han registrado cambios para el día &b60"));
-            registeredDays.put(60, true);
+            registeredDays.replace(60, true);
         }
     }
 
@@ -746,7 +777,7 @@ public final class Main extends JavaPlugin implements Listener {
 
     protected void reload(CommandSender sender) {
 
-        MessageUtil.setupConfig(this);
+        this.setupConfig();
         reloadConfig();
         this.messages.reloadFiles();
         DateManager.getInstance().reloadDate();
@@ -759,6 +790,105 @@ public final class Main extends JavaPlugin implements Listener {
 
         PDCLog.getInstance().log("Se ha recargado el plugin");
         DiscordManager.getInstance();
+    }
+
+    protected void setupListeners() {
+        getServer().getPluginManager().registerEvents(this, this);
+
+        this.spawnListener = new SpawnListener(this);
+        getServer().getPluginManager().registerEvents(spawnListener, instance);
+        getServer().getPluginManager().registerEvents(new SkeletonClasses(instance), instance);
+        getServer().getPluginManager().registerEvents(new PlayerEvents(), instance);
+        getServer().getPluginManager().registerEvents(new BlockEvents(), instance);
+        getServer().getPluginManager().registerEvents(new EntityEvents(), instance);
+        getServer().getPluginManager().registerEvents(new TotemConsumeEvent(), instance);
+        getServer().getPluginManager().registerEvents(new RaidEvents(), instance);
+        getServer().getPluginManager().registerEvents(new WorldEvents(), instance);
+        registeredDays.put(1, false);
+        registeredDays.put(20, false);
+        registeredDays.put(30, false);
+        registeredDays.put(40, false);
+        registeredDays.put(50, false);
+        registeredDays.put(60, false);
+    }
+
+    protected void setupConsoleFilter() {
+        try {
+            Class.forName("org.apache.logging.log4j.core.filter.AbstractFilter");
+            org.apache.logging.log4j.core.Logger logger;
+            logger = (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
+            logger.addFilter(new Log4JFilter());
+        } catch (ClassNotFoundException | NoClassDefFoundError e) {
+            Log4JFilter filter = new Log4JFilter();
+            Filter f = (Filter) new Log4JFilter();
+            Bukkit.getLogger().setFilter(f);
+            Logger.getLogger("Minecraft").setFilter(f);
+        }
+    }
+
+    protected void setupCommands() {
+        getCommand("pdc").setExecutor(new PDCCommand(instance));
+        getCommand("pdc").setTabCompleter(new PDCCommandCompleter());
+    }
+
+    protected void setupConfig() {
+
+        File f = new File(getDataFolder(), "config.yml");
+        FileConfiguration config = YamlConfiguration.loadConfiguration(f);
+
+        FileAPI.UtilFile c = FileAPI.select(instance, f, config);
+
+        c.set("config-version", 2);
+        c.set("Prefix", "&c&lPERMADEATH&4&lCORE &7➤ &f");
+        c.set("ban-enabled", true);
+        c.set("anti-afk-enabled", false);
+        c.set("AntiAFK.DaysForBan", 7);
+        c.set("Toggles.OptifineItems", false);
+        c.set("Toggles.DefaultDeathSoundsEnabled", true);
+        c.set("Toggles.Netherite.Helmet", 10);
+        c.set("Toggles.Netherite.Chestplate", 10);
+        c.set("Toggles.Netherite.Leggings", 10);
+        c.set("Toggles.Netherite.Boots", 10);
+        c.set("Toggles.End.Mob-Spawn-Limit", 70);
+        c.set("Toggles.End.Ender-Ghast-Count", 170);
+        c.set("Toggles.End.Ender-Creeper-Count", 20);
+        c.set("Toggles.End.Protect-End-Spawn", false);
+        c.set("Toggles.End.Protect-Radius", 10);
+        c.set("Toggles.End.PermadeathDemon.DisplayName", "&6&lPERMADEATH DEMON");
+        c.set("Toggles.End.PermadeathDemon.DisplayNameEnraged", "&6&lENRAGED PERMADEATH DEMON");
+        c.set("Toggles.End.PermadeathDemon.Health", 1350);
+        c.set("Toggles.End.PermadeathDemon.EnragedHealth", 1350);
+        c.set("Toggles.End.PermadeathDemon.Optimizar-TNT", false);
+        c.set("Toggles.TheBeginning.YticGenerateChance", 100000);
+        c.set("Toggles.Spider-Effect", true);
+        c.set("Toggles.OP-Ban", true);
+        c.set("Toggles.Doble-Mob-Cap", false);
+        c.set("Toggles.Replace-Mobs-On-Chunk-Load", true);
+        c.set("Toggles.Quantum-Explosion-Power", 60);
+        c.set("Toggles.Mike-Creeper-Spawn", true);
+        c.set("Toggles.Optimizar-Mob-Spawns", false);
+        c.set("Toggles.Gatos-Supernova.Destruir-Bloques", true);
+        c.set("Toggles.Gatos-Supernova.Fuego", true);
+        c.set("Toggles.Gatos-Supernova.Explosion-Power", 200);
+        c.set("Server-Messages.coords-msg-enable", true);
+        c.set("TotemFail.Enable", true);
+        c.set("TotemFail.Medalla", "&7¡El jugador %player% ha usado su medalla de superviviente!");
+        c.set("TotemFail.ChatMessage", "&7¡El tótem de &c%player% &7ha fallado!");
+        c.set("TotemFail.ChatMessageTotems", "&7¡Los tótems de &c%player% &7han fallado!");
+        c.set("TotemFail.NotEnoughTotems", "&7¡%player% no tenía suficientes tótems en el inventario!");
+        c.set("TotemFail.PlayerUsedTotemMessage", "&7El jugador %player% ha consumido un tótem (Probabilidad: %totem_fail% %porcent% %number%)");
+        c.set("TotemFail.PlayerUsedTotemsMessage", "&7El jugador %player% ha consumido {ammount} tótems (Probabilidad: %totem_fail% %porcent% %number%)");
+        c.set("Worlds.MainWorld", "world");
+        c.set("Worlds.EndWorld", "world_the_end");
+        c.set("DontTouch.PlayTime", 0);
+
+        c.save();
+        c.load();
+    }
+
+    public static boolean isOptifineEnabled() {
+        if (instance == null) return false;
+        return instance.getConfig().getBoolean("Toggles.OptifineItems");
     }
 
     public MobFactory getFactory() {
@@ -778,13 +908,6 @@ public final class Main extends JavaPlugin implements Listener {
         return nmsHandler;
     }
 
-    public NetheriteDrops getDrops() {
-        return drops;
-    }
-    public InfernalNetherite getInfernalNetherite() {
-        return infernalNetherite;
-    }
-
     public BeginningManager getBeginningManager() {
         return begginingManager;
     }
@@ -799,10 +922,6 @@ public final class Main extends JavaPlugin implements Listener {
 
     public EndTask getTask() {
         return task;
-    }
-
-    public EndManager getEndManager() {
-        return endManager;
     }
 
     public void setTask(EndTask task) {
@@ -827,43 +946,6 @@ public final class Main extends JavaPlugin implements Listener {
 
     public ArrayList<Player> getDoneEffectPlayers() {
         return doneEffectPlayers;
-    }
-
-
-    private void setupListeners() {
-        getServer().getPluginManager().registerEvents(this, this);
-
-        this.spawnListener = new SpawnListener(this);
-        getServer().getPluginManager().registerEvents(spawnListener, instance);
-        getServer().getPluginManager().registerEvents(new SkeletonClasses(instance), instance);
-        getServer().getPluginManager().registerEvents(new PlayerEvents(), instance);
-        getServer().getPluginManager().registerEvents(new BlockEvents(), instance);
-        getServer().getPluginManager().registerEvents(new EntityEvents(), instance);
-        getServer().getPluginManager().registerEvents(new TotemConsumeEvent(), instance);
-        getServer().getPluginManager().registerEvents(new RaidEvents(), instance);
-        getServer().getPluginManager().registerEvents(new WorldEvents(), instance);
-        registeredDays.put(20, false);
-        registeredDays.put(30, false);
-        registeredDays.put(40, false);
-        registeredDays.put(50, false);
-        registeredDays.put(60, false);
-    }
-    public void setupConsoleFilter() {
-        try {
-            Class.forName("org.apache.logging.log4j.core.filter.AbstractFilter");
-            org.apache.logging.log4j.core.Logger logger;
-            logger = (org.apache.logging.log4j.core.Logger) LogManager.getRootLogger();
-            logger.addFilter(new Log4JFilter());
-        } catch (ClassNotFoundException | NoClassDefFoundError e) {
-            Log4JFilter filter = new Log4JFilter();
-            Filter f = (Filter) new Log4JFilter();
-            Bukkit.getLogger().setFilter(f);
-            Logger.getLogger("Minecraft").setFilter(f);
-        }
-    }
-    private void setupCommands() {
-        getCommand("pdc").setExecutor(new PDCCommand(instance));
-        getCommand("pdc").setTabCompleter(new PDCCommandCompleter());
     }
 
     public ShellEvent getShulkerEvent() {

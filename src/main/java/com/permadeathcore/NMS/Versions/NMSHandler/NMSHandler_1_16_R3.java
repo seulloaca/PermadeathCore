@@ -1,17 +1,17 @@
 package com.permadeathcore.NMS.Versions.NMSHandler;
 
-import com.permadeathcore.CustomMobs.v1_16_R2.CustomCreeper;
-import com.permadeathcore.CustomMobs.v1_16_R2.CustomGhast;
+import com.permadeathcore.CustomMobs.v1_16_R3.CustomCreeper;
+import com.permadeathcore.CustomMobs.v1_16_R3.CustomGhast;
 import com.permadeathcore.Main;
 import com.permadeathcore.NMS.NMSHandler;
 import com.permadeathcore.NMS.VersionManager;
-import net.minecraft.server.v1_16_R2.*;
+import net.minecraft.server.v1_16_R3.*;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.craftbukkit.v1_16_R2.CraftWorld;
-import org.bukkit.craftbukkit.v1_16_R2.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_16_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_16_R3.entity.CraftPlayer;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.*;
 import org.bukkit.event.entity.CreatureSpawnEvent;
@@ -21,7 +21,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Random;
 import java.util.UUID;
 
-public class NMSHandler_1_16_R2 implements NMSHandler {
+public class NMSHandler_1_16_R3 implements NMSHandler {
 
     @Override
     public Class craftEntity(String path) {
@@ -29,7 +29,7 @@ public class NMSHandler_1_16_R2 implements NMSHandler {
         Class c = null;
         
         try {
-            c = Class.forName("org.bukkit.craftbukkit.v1_16_R2.entity." + path);
+            c = Class.forName("org.bukkit.craftbukkit.v1_16_R3.entity." + path);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -43,7 +43,7 @@ public class NMSHandler_1_16_R2 implements NMSHandler {
         Class c = null;
 
         try {
-            c = Class.forName("net.minecraft.server.v1_16_R2.EntityTypes");
+            c = Class.forName("net.minecraft.server.v1_16_R3.EntityTypes");
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -54,7 +54,7 @@ public class NMSHandler_1_16_R2 implements NMSHandler {
     @Override
     public Class getNMSClass(String name) {
         try {
-            return Class.forName("net.minecraft.server.v1_16_R2." + name);
+            return Class.forName("net.minecraft.server.v1_16_R3." + name);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
             return null;
@@ -649,47 +649,47 @@ public class NMSHandler_1_16_R2 implements NMSHandler {
     @Override
     public Entity spawnNMSEntity(String name, EntityType type, Location location, CreatureSpawnEvent.SpawnReason reason) {
 
-            World nmsW = ((CraftWorld) location.getWorld()).getHandle();
-            net.minecraft.server.v1_16_R2.Entity nmsEntity = null;
+        World nmsW = ((CraftWorld) location.getWorld()).getHandle();
+        net.minecraft.server.v1_16_R3.Entity nmsEntity = null;
 
-            try {
+        try {
 
-                if (name.toLowerCase().contains("bee") && VersionManager.getVersion().equalsIgnoreCase("1_14_R1")) {
+            if (name.toLowerCase().contains("bee") && VersionManager.getVersion().equalsIgnoreCase("1_14_R1")) {
 
-                    return null;
-                }
-
-                Class c = getNMSClass("Entity" + name);
-
-                if (name.toLowerCase().contains("bat") || name.toLowerCase().contains("cod") || name.toLowerCase().contains("salmon") || name.toLowerCase().contains("squid") || name.toLowerCase().contains("pufferfish") || name.toLowerCase().contains("tropicalfish")) {
-
-                    if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) {
-
-                        if (new Random().nextInt(499) <= 10) {
-
-                            nmsEntity = (net.minecraft.server.v1_16_R2.Entity) c.getConstructor(getNMSClass("EntityTypes"), getNMSClass("World")).newInstance(convertBukkitToNMS(type), nmsW);
-                        }
-                    } else {
-
-                        nmsEntity = (net.minecraft.server.v1_16_R2.Entity) c.getConstructor(getNMSClass("EntityTypes"), getNMSClass("World")).newInstance(convertBukkitToNMS(type), nmsW);
-                    }
-
-                } else {
-
-                    nmsEntity = (net.minecraft.server.v1_16_R2.Entity) c.getConstructor(getNMSClass("EntityTypes"), getNMSClass("World")).newInstance(convertBukkitToNMS(type), nmsW);
-                }
-
-            } catch (NoSuchMethodException ex) {
-            } catch (IllegalAccessException ex) {
-            } catch (InstantiationException ex) {
-            } catch (InvocationTargetException ex) {
-
+                return null;
             }
 
-            if (nmsEntity == null) return null;
+            Class c = getNMSClass("Entity" + name);
 
-            nmsEntity.setPositionRotation(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
-            nmsW.addEntity(nmsEntity, reason);
+            if (name.toLowerCase().contains("bat") || name.toLowerCase().contains("cod") || name.toLowerCase().contains("salmon") || name.toLowerCase().contains("squid") || name.toLowerCase().contains("pufferfish") || name.toLowerCase().contains("tropicalfish")) {
+
+                if (reason == CreatureSpawnEvent.SpawnReason.SPAWNER_EGG) {
+
+                    if (new Random().nextInt(499) <= 10) {
+
+                        nmsEntity = (net.minecraft.server.v1_16_R3.Entity) c.getConstructor(getNMSClass("EntityTypes"), getNMSClass("World")).newInstance(convertBukkitToNMS(type), nmsW);
+                    }
+                } else {
+
+                    nmsEntity = (net.minecraft.server.v1_16_R3.Entity) c.getConstructor(getNMSClass("EntityTypes"), getNMSClass("World")).newInstance(convertBukkitToNMS(type), nmsW);
+                }
+
+            } else {
+
+                nmsEntity = (net.minecraft.server.v1_16_R3.Entity) c.getConstructor(getNMSClass("EntityTypes"), getNMSClass("World")).newInstance(convertBukkitToNMS(type), nmsW);
+            }
+
+        } catch (NoSuchMethodException ex) {
+        } catch (IllegalAccessException ex) {
+        } catch (InstantiationException ex) {
+        } catch (InvocationTargetException ex) {
+
+        }
+
+        if (nmsEntity == null) return null;
+
+        nmsEntity.setPositionRotation(location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
+        nmsW.addEntity(nmsEntity, reason);
 
         return nmsEntity == null ? null : nmsEntity.getBukkitEntity();
     }
@@ -716,7 +716,7 @@ public class NMSHandler_1_16_R2 implements NMSHandler {
 
         String name;
         String s = type.toString().toLowerCase();
-        net.minecraft.server.v1_16_R2.Entity nms = null;
+        net.minecraft.server.v1_16_R3.Entity nms = null;
 
         if (s.contains("_")) {
 
@@ -747,10 +747,10 @@ public class NMSHandler_1_16_R2 implements NMSHandler {
 
                 if (name.toLowerCase().contains("villager")) {
 
-                    nms = (net.minecraft.server.v1_16_R2.Entity) c.getConstructor(Location.class, Main.getInstance().getNmsHandler().getNMSClass("EntityTypes"), Villager.class).newInstance(location, Main.getInstance().getNmsHandler().convertBukkitToNMS(type), null);
+                    nms = (net.minecraft.server.v1_16_R3.Entity) c.getConstructor(Location.class, Main.getInstance().getNmsHandler().getNMSClass("EntityTypes"), Villager.class).newInstance(location, Main.getInstance().getNmsHandler().convertBukkitToNMS(type), null);
                 } else {
 
-                    nms = (net.minecraft.server.v1_16_R2.Entity) c.getConstructor(Location.class, Main.getInstance().getNmsHandler().getNMSClass("EntityTypes"), WanderingTrader.class).newInstance(location, Main.getInstance().getNmsHandler().convertBukkitToNMS(type), null);
+                    nms = (net.minecraft.server.v1_16_R3.Entity) c.getConstructor(Location.class, Main.getInstance().getNmsHandler().getNMSClass("EntityTypes"), WanderingTrader.class).newInstance(location, Main.getInstance().getNmsHandler().convertBukkitToNMS(type), null);
                 }
 
             } else {
@@ -759,11 +759,11 @@ public class NMSHandler_1_16_R2 implements NMSHandler {
 
                     if (new Random().nextInt(499) <= 10) {
 
-                        nms = (net.minecraft.server.v1_16_R2.Entity) c.getConstructor(Location.class, Main.getInstance().getNmsHandler().getNMSClass("EntityTypes")).newInstance(location, Main.getInstance().getNmsHandler().convertBukkitToNMS(type));
+                        nms = (net.minecraft.server.v1_16_R3.Entity) c.getConstructor(Location.class, Main.getInstance().getNmsHandler().getNMSClass("EntityTypes")).newInstance(location, Main.getInstance().getNmsHandler().convertBukkitToNMS(type));
                     }
                 } else {
 
-                    nms = (net.minecraft.server.v1_16_R2.Entity) c.getConstructor(Location.class, Main.getInstance().getNmsHandler().getNMSClass("EntityTypes")).newInstance(location, Main.getInstance().getNmsHandler().convertBukkitToNMS(type));
+                    nms = (net.minecraft.server.v1_16_R3.Entity) c.getConstructor(Location.class, Main.getInstance().getNmsHandler().getNMSClass("EntityTypes")).newInstance(location, Main.getInstance().getNmsHandler().convertBukkitToNMS(type));
                 }
             }
 
@@ -781,7 +781,7 @@ public class NMSHandler_1_16_R2 implements NMSHandler {
     public Entity spawnNMSCustomEntity(String name, EntityType type, Location location, CreatureSpawnEvent.SpawnReason reason) {
 
         World nmsW = ((CraftWorld) location.getWorld()).getHandle();
-        net.minecraft.server.v1_16_R2.Entity nmsEntity = null;
+        net.minecraft.server.v1_16_R3.Entity nmsEntity = null;
 
         try {
 
@@ -791,7 +791,7 @@ public class NMSHandler_1_16_R2 implements NMSHandler {
             }
 
             Class c = Class.forName("com.permadeathcore.CustomMobs.v" + VersionManager.getVersion() + "." + name);
-            nmsEntity = (net.minecraft.server.v1_16_R2.Entity) c.getConstructor(Location.class).newInstance(location);
+            nmsEntity = (net.minecraft.server.v1_16_R3.Entity) c.getConstructor(Location.class).newInstance(location);
 
         } catch (NoSuchMethodException | ClassNotFoundException ex) {
         } catch (IllegalAccessException ex) {

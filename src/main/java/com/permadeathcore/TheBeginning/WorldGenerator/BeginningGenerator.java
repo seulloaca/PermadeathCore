@@ -1,8 +1,7 @@
-package com.permadeathcore.TheBeginning.Generator.Remastered;
+package com.permadeathcore.TheBeginning.WorldGenerator;
 
 import com.permadeathcore.Main;
 import com.sk89q.worldedit.EditSession;
-import com.sk89q.worldedit.EditSessionFactory;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
 import com.sk89q.worldedit.bukkit.BukkitWorld;
@@ -134,12 +133,10 @@ public class BeginningGenerator extends ChunkGenerator {
     private void generateYtic(World world, int x, int z) {
         Clipboard clipboard;
         File file = new File(Main.getInstance().getDataFolder(), "schematics/ytic.schem");
-        ;
 
         ClipboardFormat format = ClipboardFormats.findByFile(file);
 
         assert format != null;
-
         try (ClipboardReader reader = format.getReader(new FileInputStream(file))) {
             clipboard = reader.read();
         } catch (IOException e) {

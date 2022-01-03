@@ -1,4 +1,4 @@
-package com.permadeathcore.TheBeginning.Loot;
+package com.permadeathcore.TheBeginning.WorldGenerator;
 
 import com.permadeathcore.TheBeginning.BeginningManager;
 import org.bukkit.Material;

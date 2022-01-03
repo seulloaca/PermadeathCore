@@ -1,4 +1,4 @@
-package com.permadeathcore.Util.Manager;
+package com.permadeathcore.Util.Manager.Data;
 
 import com.permadeathcore.Main;
 import org.bukkit.Material;

@@ -28,34 +28,18 @@ public class PeaceToHostileManager implements Listener {
     }
 
     public void initialize() {
-
         if (instance.getDays() >= 20 && !VersionManager.isRunningNetherUpdate_v2()) {
-
             for (World w : Bukkit.getWorlds()) {
-
                 for (Entity entity : w.getEntities()) {
-
                     EntityType type = entity.getType();
 
-                    if (!isHostileMob(type) && entity instanceof LivingEntity) {
-
-                        if (type == EntityType.ENDERMAN || type == EntityType.WITHER || type == EntityType.ENDER_DRAGON) {
-                            return;
-                        }
+                    if (!isHostileMob(type) && entity instanceof LivingEntity && (type != EntityType.ENDERMAN && type != EntityType.WITHER && type != EntityType.ENDER_DRAGON)) {
+                        instance.getNmsAccesor().injectHostilePathfinders(entity);
 
                         if (type == EntityType.DOLPHIN || type == EntityType.FOX || type == EntityType.WOLF || type == EntityType.CAT || type == EntityType.OCELOT || type == EntityType.PANDA
-                                || type == EntityType.POLAR_BEAR || type == EntityType.SNOWMAN) {
+                                || type == EntityType.POLAR_BEAR || type == EntityType.SNOWMAN) return;
 
-                            instance.getNmsAccesor().injectHostilePathfinders(entity);
-
-                            return;
-                        }
-
-                        instance.getNmsAccesor().injectHostilePathfinders(entity);
                         instance.getNmsAccesor().registerAttribute(Attribute.GENERIC_ATTACK_DAMAGE, 8.0D, entity);
-
-
-
                     }
                 }
             }

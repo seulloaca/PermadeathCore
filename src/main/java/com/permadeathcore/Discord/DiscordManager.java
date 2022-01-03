@@ -1,8 +1,8 @@
 package com.permadeathcore.Discord;
 
 import com.permadeathcore.Main;
-import com.permadeathcore.Util.Log.PDCLog;
-import com.permadeathcore.Util.Manager.PlayerDataManager;
+import com.permadeathcore.Util.Manager.Log.PDCLog;
+import com.permadeathcore.Util.Manager.Data.PlayerDataManager;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -16,9 +16,6 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.PlayerDeathEvent;
 
 import javax.security.auth.login.LoginException;
 import java.awt.*;

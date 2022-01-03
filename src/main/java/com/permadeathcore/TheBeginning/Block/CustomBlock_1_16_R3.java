@@ -1,19 +1,19 @@
 package com.permadeathcore.TheBeginning.Block;
 
 import com.permadeathcore.Util.Item.PermaDeathItems;
-import net.minecraft.server.v1_14_R1.BlockPosition;
-import net.minecraft.server.v1_14_R1.NBTTagCompound;
-import net.minecraft.server.v1_14_R1.NBTTagList;
-import net.minecraft.server.v1_14_R1.TileEntityMobSpawner;
+import net.minecraft.server.v1_16_R3.BlockPosition;
+import net.minecraft.server.v1_16_R3.NBTTagCompound;
+import net.minecraft.server.v1_16_R3.NBTTagList;
+import net.minecraft.server.v1_16_R3.TileEntityMobSpawner;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
-import org.bukkit.craftbukkit.v1_14_R1.CraftWorld;
+import org.bukkit.craftbukkit.v1_16_R3.CraftWorld;
 import org.bukkit.event.block.BlockBreakEvent;
 
-public class CustomBlock_1_14_R1 implements CustomBlock {
+public class CustomBlock_1_16_R3 implements CustomBlock {
 
     public Location blockFaceToLocation(Block block, BlockFace face) {
         Location loc = block.getLocation();
@@ -52,7 +52,6 @@ public class CustomBlock_1_14_R1 implements CustomBlock {
         TileEntityMobSpawner spawner = (TileEntityMobSpawner) ((CraftWorld) loc.getWorld()).getHandle()
                 .getTileEntity(bp);
 
-
         NBTTagCompound tileData = spawner.b();
         NBTTagCompound spawnData = new NBTTagCompound();
         NBTTagList armor = new NBTTagList();
@@ -83,7 +82,7 @@ public class CustomBlock_1_14_R1 implements CustomBlock {
         tileData.setShort("MaxNearbyEntities", (short) 0);
         tileData.set("SpawnData", spawnData);
 
-        spawner.load(tileData);
+        spawner.load(spawner.getBlock(), tileData);
 
         loc.getWorld().playSound(loc, Sound.BLOCK_STONE_BREAK, 1, 1);
     }

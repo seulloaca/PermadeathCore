@@ -2,11 +2,12 @@ package com.permadeathcore.Listener.Player;
 
 import com.permadeathcore.Discord.DiscordManager;
 import com.permadeathcore.Main;
-import com.permadeathcore.Util.Item.CustomItems;
-import com.permadeathcore.Util.Item.HiddenStringUtils;
-import com.permadeathcore.Util.Manager.EndDataManager;
-import com.permadeathcore.Util.Manager.PlayerDataManager;
-import com.permadeathcore.Util.Item.ItemBuilder;
+import com.permadeathcore.Util.Configurations.Messages;
+import com.permadeathcore.Util.Item.*;
+import com.permadeathcore.Util.Library.HiddenStringUtils;
+import com.permadeathcore.Util.Library.ItemBuilder;
+import com.permadeathcore.Util.Manager.Data.EndDataManager;
+import com.permadeathcore.Util.Manager.Data.PlayerDataManager;
 import com.permadeathcore.Util.Library.UpdateChecker;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.*;
@@ -102,7 +103,8 @@ public class PlayerEvents implements Listener {
             String ServerMessageSubtitle = Main.getInstance().getMessages().getMessage("DeathMessageSubtitle", player);
 
             player.sendTitle(ServerMessageTitle, ServerMessageSubtitle.replace("%player%", victim), 20, 20 * 5, 20);
-            player.playSound(player.getLocation(), Sound.ENTITY_BLAZE_DEATH, Float.MAX_VALUE, -0.1f);
+            if (Objects.requireNonNull(instance.getConfig().getBoolean("Toggles.DefaultDeathSoundsEnabled"))) player.playSound(player.getLocation(), Sound.ENTITY_BLAZE_DEATH, Float.MAX_VALUE, -0.1f);
+            player.playSound(player.getLocation(), "pdc_muerte", Float.MAX_VALUE, 1.0F);
         }
 
         loadTicks();
@@ -158,7 +160,7 @@ public class PlayerEvents implements Listener {
                         for (Player p : Bukkit.getOnlinePlayers()) {
                             String msg = Main.getInstance().getMessages().getMessage("DeathTrainMessage", p).replace("%tiempo%", String.valueOf(stormHours));
                             p.sendMessage(msg);
-                            p.playSound(p.getLocation(), Sound.ENTITY_SKELETON_HORSE_DEATH, 10, 1);
+                            if (Objects.requireNonNull(instance.getConfig().getBoolean("Toggles.DefaultDeathSoundsEnabled"))) p.playSound(p.getLocation(), Sound.ENTITY_SKELETON_HORSE_DEATH, 10, 1);
                         }
                         Main.getInstance().getMessages().sendConsole(Main.getInstance().getMessages().getMsgForConsole("DeathTrainMessage").replace("%tiempo%", String.valueOf(stormHours)));
                         DiscordManager.getInstance().onDeathTrain(Main.getInstance().getMessages().getMsgForConsole("DeathTrainMessage").replace("%tiempo%", String.valueOf(stormHours)));
@@ -188,7 +190,7 @@ public class PlayerEvents implements Listener {
 
                             String msg = Main.getInstance().getMessages().getMessage(path, p).replace("%tiempo%", time);
                             p.sendMessage(msg);
-                            p.playSound(p.getLocation(), Sound.ENTITY_SKELETON_HORSE_DEATH, 10, 1);
+                            if (Objects.requireNonNull(instance.getConfig().getBoolean("Toggles.DefaultDeathSoundsEnabled"))) p.playSound(p.getLocation(), Sound.ENTITY_SKELETON_HORSE_DEATH, 10, 1);
                         }
 
                         Main.getInstance().getMessages().sendConsole(Main.getInstance().getMessages().getMsgForConsole(path).replace("%tiempo%", time));
@@ -236,25 +238,30 @@ public class PlayerEvents implements Listener {
             }
         }, 40L);
 
-        if (Main.getInstance().getConfig().getBoolean("Toggles.Player-Skulls")) {
-            Location l = p.getEyeLocation().clone();
-            if (l.getY() < 3) {
-                l.setY(3);
+        Bukkit.getScheduler().runTaskLater(Main.getInstance(), new Runnable() {
+            @Override
+            public void run() {
+                if (Main.getInstance().getConfig().getBoolean("Toggles.Player-Skulls")) {
+                    Location l = p.getEyeLocation().clone();
+                    if (l.getY() < 3) {
+                        l.setY(3);
+                    }
+                    Block skullBlock = l.getBlock();
+                    skullBlock.setType(Material.PLAYER_HEAD);
+
+                    Skull skullState = (Skull) skullBlock.getState();
+                    skullState.setOwningPlayer(p);
+                    skullState.update();
+
+                    Rotatable rotatable = (Rotatable) skullBlock.getBlockData();
+                    rotatable.setRotation(getRotation(p));
+                    skullBlock.setBlockData(rotatable);
+
+                    skullBlock.getRelative(BlockFace.DOWN).setType(Material.NETHER_BRICK_FENCE);
+                    skullBlock.getRelative(BlockFace.DOWN).getRelative(BlockFace.DOWN).setType(Material.BEDROCK);
+                }
             }
-            Block skullBlock = l.getBlock();
-            skullBlock.setType(Material.PLAYER_HEAD);
-
-            Skull skullState = (Skull) skullBlock.getState();
-            skullState.setOwningPlayer(p);
-            skullState.update();
-
-            Rotatable rotatable = (Rotatable) skullBlock.getBlockData();
-            rotatable.setRotation(getRotation(p));
-            skullBlock.setBlockData(rotatable);
-
-            skullBlock.getRelative(BlockFace.DOWN).setType(Material.NETHER_BRICK_FENCE);
-            skullBlock.getRelative(BlockFace.DOWN).getRelative(BlockFace.DOWN).setType(Material.BEDROCK);
-        }
+        }, 10L);
     }
 
     public BlockFace getRotation(Player player) {
@@ -315,6 +322,7 @@ public class PlayerEvents implements Listener {
             instance.world.playSound(playerbed, Sound.ENTITY_GENERIC_EXPLODE, 1.0F, 1.0F);
             instance.world.spawnParticle(Particle.EXPLOSION_HUGE, playerbed, 1);
 
+            Messages
             if (Main.getInstance().getDays() >= 50) {
                 if (new SplittableRandom().nextInt(100) + 1 <= 10) {
 
@@ -492,6 +500,51 @@ public class PlayerEvents implements Listener {
         if (instance.getOrbEvent().isRunning()) {
             instance.getOrbEvent().addPlayer(e.getPlayer());
         }
+
+        boolean sendingTitle = (player.hasPlayedBefore() ? new Random().nextInt(5) == 0 : true);
+
+        Bukkit.getScheduler().runTaskLater(instance, new Runnable() {
+            @Override
+            public void run() {
+                if (player == null) return;
+                if (!player.isOnline()) return;
+
+                player.sendMessage(Main.format("&e&m-------------------------------------------"));
+                player.sendMessage(Main.format("        &c&lPERMA&7&lDEATH &4&lCORE"));
+                player.sendMessage(Main.format("&7Servidor InfernalCore (Servidor original del Plugin): discord.gg/InfernalCore"));
+                player.sendMessage(Main.format(" "));
+                player.sendMessage(Main.format("&b&l - Servidor de Discord con soporte del Desarrollador: -"));
+                player.sendMessage(Main.format("&7Forma parte de nuestra comunidad, no solo damos soporte,"));
+                player.sendMessage(Main.format("&7jugamos juegos, nos divertimos y también hay plugins adicionales."));
+                player.sendMessage(Main.format("&7Se ofrece soporte oficial del desarrollador del Plugin."));
+                player.sendMessage(Main.format(" "));
+                player.sendMessage(Main.format("&e&nInvitación a Discord&r&7 (soporte, noticias y proyectos):"));
+                player.sendMessage(Main.format("&cNota: este no es el mismo Discord que InfernalCore."));
+                player.sendMessage(Main.format("&9https://discord.gg/w58wzrcJU8"));
+                player.sendMessage(Main.format("&e&m-------------------------------------------"));
+                if (!Main.isOptifineEnabled()) player.sendMessage(Main.format("&cRecuerda aceptar los paquetes de Recursos para ver los ítems y texturas personalizadas."));
+                player.sendMessage(Main.tag + Main.format("&eEjecuta el comando &f&l/pdc &r&epara más información."));
+
+                if (sendingTitle) {
+                    player.sendTitle(Main.format("&c&lPERMA&7&lDEATH &4&lCORE"), Main.format("&7Twitter: &b@SebazCRC"), 1, 20*5, 1);
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 100.0F, 100.0F);
+                }
+            }
+        }, 20*15);
+
+        Bukkit.getScheduler().runTaskLater(instance, new Runnable() {
+            @Override
+            public void run() {
+                if (player == null) return;
+                if (!player.isOnline()) return;
+                if (sendingTitle) {
+                    player.sendTitle(Main.format("&c&lPERMA&7&lDEATH &4&lCORE"), Main.format("&7Discord: &9https://discord.gg/8evPbuxPke"), 1, 20*5, 1);
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 100.0F, 100.0F);
+                }
+            }
+        }, 20*20);
+
+        if (!Main.isOptifineEnabled()) player.setResourcePack("https://www.dropbox.com/s/h3v77ga72l9vhpg/PermaDeathCore%20RP%20v1.2.zip?dl=1");
 
         if (player.isOp()) {
             player.sendMessage(instance.tag + instance.format("&eSi tienes algún problema puedes unirte a nuestro discord, enlace con: &9/pdc discord"));
@@ -977,15 +1030,19 @@ public class PlayerEvents implements Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
-    public void restrictCrafting(PrepareItemCraftEvent event) {
+    public void restrictCrafting(PrepareItemCraftEvent e) {
 
-        CraftPrepareManager manager = new CraftPrepareManager(event);
+        CraftPrepareManager manager = new CraftPrepareManager(e);
 
         manager.runCheckForLifeOrb();
         manager.runCheckForBeginningRelic();
         manager.runCheckForInfernalPiece();
         manager.runCheckForInfernalElytra();
         manager.runCheckForGaps();
+
+        if (e.getInventory().getResult() != null && e.getInventory().getResult().getType().name().toLowerCase().contains("leather_") && !e.getInventory().getResult().getItemMeta().isUnbreakable() && instance.getDays() >= 25) {
+            e.getInventory().setResult(new ItemStack(Material.AIR));
+        }
     }
 
     @EventHandler
@@ -1000,7 +1057,7 @@ public class PlayerEvents implements Listener {
 
             if (res.hasItemMeta()) {
 
-                if (CustomItems.isEndRelic(res)) {
+                if (PermaDeathItems.isEndRelic(res)) {
 
                     ItemMeta meta = res.getItemMeta();
                     meta.setLore(Arrays.asList(HiddenStringUtils.encodeString("{" + UUID.randomUUID().toString() + ": 0}")));
@@ -1010,7 +1067,7 @@ public class PlayerEvents implements Listener {
                     return;
                 }
 
-                if (res.isSimilar(CustomItems.createBeginningRelic()) || res.isSimilar(CustomItems.createLifeOrb())) {
+                if (res.isSimilar(PermaDeathItems.createBeginningRelic()) || res.isSimilar(PermaDeathItems.createLifeOrb())) {
                     if (e.getWhoClicked() instanceof Player) {
                         e.getInventory().setMatrix(clearMatrix());
                         Player p = (Player) e.getWhoClicked();
@@ -1055,7 +1112,7 @@ public class PlayerEvents implements Listener {
 
             if (result == null) return;
 
-            if (result.isSimilar(CustomItems.createBeginningRelic())) {
+            if (result.isSimilar(PermaDeathItems.createBeginningRelic())) {
                 int diamondBlocks = 0;
                 int r = 0;
                 for (ItemStack s : e.getInventory().getMatrix()) {
@@ -1065,7 +1122,7 @@ public class PlayerEvents implements Listener {
                                 diamondBlocks++;
                             }
                         }
-                        if (CustomItems.isEndRelic(s)) {
+                        if (PermaDeathItems.isEndRelic(s)) {
                             r++;
                         }
                     }
@@ -1076,14 +1133,14 @@ public class PlayerEvents implements Listener {
                 }
 
                 if (diamondBlocks >= 4 && r >= 1) {
-                    e.getInventory().setResult(CustomItems.createBeginningRelic());
+                    e.getInventory().setResult(PermaDeathItems.createBeginningRelic());
                 }
             }
         }
 
         public void runCheckForInfernalPiece() {
             if (result == null) return;
-            if (instance.getDrops().isInfernalPiece(result)) {
+            if (NetheriteArmor.isInfernalPiece(result)) {
                 if (result.getType() == Material.ELYTRA) return;
                 int diamondsFound = 0;
                 boolean foundPiece = false;
@@ -1097,7 +1154,7 @@ public class PlayerEvents implements Listener {
                                     diamondsFound = diamondsFound + 1;
                                 }
                             }
-                            if (instance.getDrops().isNetheritePiece(item)) {
+                            if (NetheriteArmor.isNetheritePiece(item)) {
                                 foundPiece = true;
                             }
                         }
@@ -1113,19 +1170,19 @@ public class PlayerEvents implements Listener {
                     Material mat = result.getType();
 
                     if (mat == Material.LEATHER_HELMET) {
-                        e.getInventory().setResult(instance.getInfernalNetherite().craftNetheriteHelmet());
+                        e.getInventory().setResult(InfernalNetherite.craftNetheriteHelmet());
                     }
 
                     if (mat == Material.LEATHER_CHESTPLATE) {
-                        e.getInventory().setResult(instance.getInfernalNetherite().craftNetheriteChest());
+                        e.getInventory().setResult(InfernalNetherite.craftNetheriteChest());
                     }
 
                     if (mat == Material.LEATHER_LEGGINGS) {
-                        e.getInventory().setResult(instance.getInfernalNetherite().craftNetheriteLegs());
+                        e.getInventory().setResult(InfernalNetherite.craftNetheriteLegs());
                     }
 
                     if (mat == Material.LEATHER_BOOTS) {
-                        e.getInventory().setResult(instance.getInfernalNetherite().craftNetheriteBoots());
+                        e.getInventory().setResult(InfernalNetherite.craftNetheriteBoots());
                     }
                 }
             }
@@ -1151,7 +1208,7 @@ public class PlayerEvents implements Listener {
                 }
 
                 if (diamondsFound >= 8) {
-                    e.getInventory().setResult(CustomItems.crearElytraInfernal());
+                    e.getInventory().setResult(PermaDeathItems.crearElytraInfernal());
                 } else {
                     e.getInventory().setResult(null);
                 }
@@ -1232,7 +1289,7 @@ public class PlayerEvents implements Listener {
 
         public void runCheckForLifeOrb() {
             if (result == null) return;
-            if (!result.isSimilar(CustomItems.createLifeOrb())) return;
+            if (!result.isSimilar(PermaDeathItems.createLifeOrb())) return;
             if (!instance.getOrbEvent().isRunning()) return;
             int items = 0;
 
@@ -1251,7 +1308,7 @@ public class PlayerEvents implements Listener {
                 e.getInventory().setResult(null);
             }
             if (items >= 9) {
-                e.getInventory().setResult(CustomItems.createLifeOrb());
+                e.getInventory().setResult(PermaDeathItems.createLifeOrb());
             }
         }
     }

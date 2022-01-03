@@ -1,4 +1,4 @@
-package com.permadeathcore.Util.Manager;
+package com.permadeathcore.Util.Manager.Data;
 
 import com.permadeathcore.Util.Configurations.Language;
 import com.permadeathcore.Main;

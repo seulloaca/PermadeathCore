@@ -33,9 +33,7 @@ public class EntityTeleport {
         this.locZ = c.getLocation().getZ();
         this.random = new SplittableRandom();
 
-
         if (e.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK && e.getCause() != EntityDamageEvent.DamageCause.VOID) {
-
             if (main.getFactory().hasData(e.getEntity(), "ender_creeper") || main.getFactory().hasData(e.getEntity(), "ender_quantum_creeper")) {
                 teleport();
                 e.setCancelled(true);
@@ -54,7 +52,6 @@ public class EntityTeleport {
     }
 
     public boolean teleport() {
-
         for (int i = 0; i < 64; ++i) {
             if (eq()) {
                 return true;
@@ -65,45 +62,39 @@ public class EntityTeleport {
     }
 
     private boolean eq() {
-        double d0 = locX + (this.random.nextDouble() - 0.5D) * 64.0D;
-        double d1 = locY + (double) (this.random.nextInt(64) - 32);
-        double d2 = locZ + (this.random.nextDouble() - 0.5D) * 64.0D;
-        return this.o(d0, d1, d2);
-    }
+        double x = locX + (this.random.nextDouble() - 0.5D) * 64.0D;
+        double y = locY + (double) (this.random.nextInt(64) - 32);
+        double z = locZ + (this.random.nextDouble() - 0.5D) * 64.0D;
 
-    private boolean o(double x, double y, double z) {
+        //BlockActuallyPosition act = new BlockActuallyPosition(this.world.getBlockAt((int)x, (int)y, (int)z));
+        Block b = this.world.getBlockAt((int)x, (int)y, (int)z);
 
-        BlockActuallyPosition act = new BlockActuallyPosition(this.world.getBlockAt((int)x, (int)y, (int)z));
-        Block b = act.getBlock();
+        while (b.getY() > 0 && b.getType().isAir()) b = b.getRelative(BlockFace.DOWN);
+        //act = act.goDeeper();
 
-        while (b.getY() > 0 && !b.getType().isSolid()) {
-            act = act.goDeeper();
-            b = act.getBlock();
-        }
+        if (b.getY() <= 0) return false;
 
-        if (b.getY() == 0) {
-            return false;
-        }
-        
         return this.c.teleport(new Location(this.world, x, b.getY() + 1, z));
     }
 
+    /**
     private class BlockActuallyPosition {
 
-        private Block start;
+        private Block block;
 
         public BlockActuallyPosition(Block start) {
-            this.start = start;
+            this.block = start;
         }
 
         public BlockActuallyPosition goDeeper() {
-            this.start = this.start.getRelative(BlockFace.DOWN);
+            this.block = this.block.getRelative(BlockFace.DOWN);
             return this;
         }
 
         public Block getBlock() {
-            return start;
+            return block;
         }
     }
+     */
 }
 

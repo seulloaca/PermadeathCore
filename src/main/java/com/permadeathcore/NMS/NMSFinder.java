@@ -2,10 +2,7 @@ package com.permadeathcore.NMS;
 
 import com.permadeathcore.Main;
 import com.permadeathcore.NMS.VersionManager;
-import com.permadeathcore.NMS.Versions.ClassFinder.ClassFinder_1_14_R1;
-import com.permadeathcore.NMS.Versions.ClassFinder.ClassFinder_1_15_R1;
-import com.permadeathcore.NMS.Versions.ClassFinder.ClassFinder_1_16_R1;
-import com.permadeathcore.NMS.Versions.ClassFinder.ClassFinder_1_16_R2;
+import com.permadeathcore.NMS.Versions.ClassFinder.*;
 
 public class NMSFinder {
 
@@ -38,13 +35,16 @@ public class NMSFinder {
             return new ClassFinder_1_16_R2().findNmsHandler();
         }
 
+        if (VersionManager.getVersion().equalsIgnoreCase("1_16_R3")) {
+            return new ClassFinder_1_16_R3().findNmsHandler();
+        }
+
         return null;
     }
 
     public Object getNMSAccesor() {
 
         if (VersionManager.isRunning14()) {
-
             return new ClassFinder_1_14_R1().findNmsAccesor();
         }
 
@@ -61,6 +61,10 @@ public class NMSFinder {
         if (VersionManager.getVersion().equalsIgnoreCase("1_16_R2")) {
 
             return new ClassFinder_1_16_R2().findNmsAccesor();
+        }
+
+        if (VersionManager.getVersion().equalsIgnoreCase("1_16_R3")) {
+            return new ClassFinder_1_16_R3().findNmsAccesor();
         }
 
         return null;
@@ -84,8 +88,12 @@ public class NMSFinder {
         }
 
         if (VersionManager.getVersion().equalsIgnoreCase("1_16_R2")) {
-
             return new ClassFinder_1_16_R2().findCustomBlock();
+        }
+
+        if (VersionManager.getVersion().equalsIgnoreCase("1_16_R3")) {
+
+            return new ClassFinder_1_16_R3().findCustomBlock();
         }
 
         return null;

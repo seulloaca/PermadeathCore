@@ -1,17 +1,15 @@
 package com.permadeathcore.Util.Manager;
 
 import com.permadeathcore.Main;
-import com.permadeathcore.Util.Item.CustomItems;
-import com.permadeathcore.Util.Item.ItemBuilder;
-import com.permadeathcore.Util.Log.PDCLog;
+import com.permadeathcore.Util.Item.PermaDeathItems;
+import com.permadeathcore.Util.Item.InfernalNetherite;
+import com.permadeathcore.Util.Library.ItemBuilder;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
-
-import java.util.Iterator;
 
 public class RecipeManager {
 
@@ -46,7 +44,7 @@ public class RecipeManager {
 
     private void registerBeginningRelic() {
 
-        ItemStack s = CustomItems.createBeginningRelic();
+        ItemStack s = PermaDeathItems.createBeginningRelic();
 
         NamespacedKey key = new NamespacedKey(instance, "beginning_relic");
         ShapedRecipe recipe = new ShapedRecipe(key, s);
@@ -59,7 +57,7 @@ public class RecipeManager {
 
     private void registerIE() {
 
-        ItemStack s = CustomItems.crearElytraInfernal();
+        ItemStack s = PermaDeathItems.crearElytraInfernal();
 
         NamespacedKey key = new NamespacedKey(instance, "infernal_elytra");
         ShapedRecipe recipe = new ShapedRecipe(key, s);
@@ -70,7 +68,7 @@ public class RecipeManager {
     }
 
     private void registerINH() {
-        ItemStack s = instance.getInfernalNetherite().craftNetheriteHelmet();
+        ItemStack s = InfernalNetherite.craftNetheriteHelmet();
 
         NamespacedKey key = new NamespacedKey(instance, "infernal_helmet");
         ShapedRecipe recipe = new ShapedRecipe(key, s);
@@ -81,7 +79,7 @@ public class RecipeManager {
     }
 
     private void registerINC() {
-        ItemStack s = instance.getInfernalNetherite().craftNetheriteChest();
+        ItemStack s = InfernalNetherite.craftNetheriteChest();
 
         NamespacedKey key = new NamespacedKey(instance, "infernal_chestplate");
         ShapedRecipe recipe = new ShapedRecipe(key, s);
@@ -92,7 +90,7 @@ public class RecipeManager {
     }
 
     private void registerINL() {
-        ItemStack s = instance.getInfernalNetherite().craftNetheriteLegs();
+        ItemStack s = InfernalNetherite.craftNetheriteLegs();
 
         NamespacedKey key = new NamespacedKey(instance, "infernal_leggings");
         ShapedRecipe recipe = new ShapedRecipe(key, s);
@@ -103,7 +101,7 @@ public class RecipeManager {
     }
 
     private void registerINB() {
-        ItemStack s = instance.getInfernalNetherite().craftNetheriteBoots();
+        ItemStack s = InfernalNetherite.craftNetheriteBoots();
 
         NamespacedKey key = new NamespacedKey(instance, "infernal_boots");
         ShapedRecipe recipe = new ShapedRecipe(key, s);
@@ -116,7 +114,7 @@ public class RecipeManager {
 
     private void registerEndRel() {
 
-        ItemStack s = CustomItems.crearReliquia();
+        ItemStack s = PermaDeathItems.crearReliquia();
 
         ItemMeta meta = s.getItemMeta();
         meta.setUnbreakable(true);
@@ -169,7 +167,7 @@ public class RecipeManager {
 
     private void registerLifeOrb() {
 
-        ItemStack s = CustomItems.createLifeOrb();
+        ItemStack s = PermaDeathItems.createLifeOrb();
 
         NamespacedKey key = new NamespacedKey(instance, "PERMADEATHCORE_LIFO");
         ShapedRecipe recipe = new ShapedRecipe(key, s);

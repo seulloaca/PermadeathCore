@@ -1,4 +1,4 @@
-package com.permadeathcore.Util.Log;
+package com.permadeathcore.Util.Manager.Log;
 
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.core.LogEvent;

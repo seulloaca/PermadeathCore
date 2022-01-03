@@ -1,4 +1,4 @@
-package com.permadeathcore.TheBeginning.Generator.Remastered;
+package com.permadeathcore.TheBeginning.WorldGenerator;
 
 import io.netty.util.internal.ConcurrentSet;
 import org.bukkit.*;

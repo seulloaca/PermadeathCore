@@ -1,4 +1,4 @@
-package com.permadeathcore.Util.Manager;
+package com.permadeathcore.Util.Manager.Data;
 
 import com.mysql.fabric.xmlrpc.base.Array;
 import com.permadeathcore.Main;

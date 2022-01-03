@@ -1,9 +1,9 @@
 package com.permadeathcore.TheBeginning;
 
 import com.permadeathcore.Main;
-import com.permadeathcore.Util.Manager.BeginningDataManager;
-import com.permadeathcore.TheBeginning.Generator.Remastered.BeginningGenerator;
-import com.permadeathcore.TheBeginning.Loot.BeginningLootTable;
+import com.permadeathcore.Util.Manager.Data.BeginningDataManager;
+import com.permadeathcore.TheBeginning.WorldGenerator.BeginningGenerator;
+import com.permadeathcore.TheBeginning.WorldGenerator.BeginningLootTable;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;

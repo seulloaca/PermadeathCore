@@ -1,6 +1,8 @@
 package com.permadeathcore.Util.Item;
 
 import com.permadeathcore.Main;
+import com.permadeathcore.Util.Library.HiddenStringUtils;
+import com.permadeathcore.Util.Library.ItemBuilder;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -14,11 +16,11 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.Arrays;
 import java.util.UUID;
 
-public class CustomItems {
+public class PermaDeathItems {
 
     public static ItemStack crearReliquia() {
 
-        ItemStack s = new ItemBuilder(Material.LIGHT_BLUE_DYE).setDisplayName(format("&6Reliquia Del Fin")).build();
+        ItemStack s = new ItemBuilder(Material.LIGHT_BLUE_DYE).setCustomModelData(1, !Main.isOptifineEnabled()).setDisplayName(format("&6Reliquia Del Fin")).build();
 
         ItemMeta meta = s.getItemMeta();
         meta.setUnbreakable(true);
@@ -30,16 +32,16 @@ public class CustomItems {
     }
 
     public static ItemStack createLifeOrb() {
-        return new ItemBuilder(Material.BROWN_DYE).setUnbrekeable(true).setDisplayName(format("&6Orbe de Vida")).build();
+        return new ItemBuilder(Material.BROWN_DYE).setCustomModelData(1, !Main.isOptifineEnabled()).setUnbrekeable(true).setDisplayName(format("&6Orbe de Vida")).build();
     }
 
     public static ItemStack createBeginningRelic() {
-        return new ItemBuilder(Material.CYAN_DYE).setUnbrekeable(true).setDisplayName(format("&6Reliquia del Comienzo")).build();
+        return new ItemBuilder(Material.CYAN_DYE).setCustomModelData(1, !Main.isOptifineEnabled()).setUnbrekeable(true).setDisplayName(format("&6Reliquia del Comienzo")).build();
     }
 
     public static ItemStack crearElytraInfernal() {
 
-        ItemStack s = new ItemBuilder(Material.ELYTRA).setDisplayName(format("&6Elytras de Netherite Infernal")).setUnbrekeable(true).build();
+        ItemStack s = new ItemBuilder(Material.ELYTRA).setCustomModelData(1).setDisplayName(format("&6Elytras de Netherite Infernal")).build();
 
         ItemMeta meta = s.getItemMeta();
 
@@ -56,7 +58,7 @@ public class CustomItems {
 
     public static ItemStack createNetheriteSword() {
 
-        ItemStack s = new ItemBuilder(Material.DIAMOND_SWORD).setDisplayName(format("&6Espada de Netherite")).build();
+        ItemStack s = new ItemBuilder(Material.DIAMOND_SWORD).setCustomModelData(1, !Main.isOptifineEnabled()).setDisplayName(format("&6Espada de Netherite")).build();
         ItemMeta meta = s.getItemMeta();
 
         AttributeModifier modifier = new AttributeModifier(UUID.randomUUID(), "generic.attackDamage", 8.0, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND);
@@ -71,7 +73,7 @@ public class CustomItems {
 
     public static ItemStack createNetheritePickaxe() {
 
-        ItemStack s = new ItemBuilder(Material.DIAMOND_PICKAXE).setDisplayName(format("&6Pico de Netherite")).build();
+        ItemStack s = new ItemBuilder(Material.DIAMOND_PICKAXE).setCustomModelData(1, !Main.isOptifineEnabled()).setDisplayName(format("&6Pico de Netherite")).build();
         ItemMeta meta = s.getItemMeta();
         AttributeModifier modifier = new AttributeModifier(UUID.randomUUID(), "generic.attackDamage", 6.0, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND);
         AttributeModifier modifier2 = new AttributeModifier(UUID.randomUUID(), "generic.attackSpeed", 1.2, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND);
@@ -85,7 +87,7 @@ public class CustomItems {
 
     public static ItemStack createNetheriteHoe() {
 
-        ItemStack s = new ItemBuilder(Material.DIAMOND_HOE).setDisplayName(format("&6Azada de Netherite")).build();
+        ItemStack s = new ItemBuilder(Material.DIAMOND_HOE).setCustomModelData(1, !Main.isOptifineEnabled()).setDisplayName(format("&6Azada de Netherite")).build();
         ItemMeta meta = s.getItemMeta();
         meta.setUnbreakable(true);
         s.setItemMeta(meta);
@@ -95,7 +97,7 @@ public class CustomItems {
 
     public static ItemStack createNetheriteAxe() {
 
-        ItemStack s = new ItemBuilder(Material.DIAMOND_AXE).setDisplayName(format("&6Hacha de Netherite")).build();
+        ItemStack s = new ItemBuilder(Material.DIAMOND_AXE).setCustomModelData(1, !Main.isOptifineEnabled()).setDisplayName(format("&6Hacha de Netherite")).build();
         ItemMeta meta = s.getItemMeta();
         AttributeModifier modifier = new AttributeModifier(UUID.randomUUID(), "generic.attackDamage", 10.0, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND);
         AttributeModifier modifier2 = new AttributeModifier(UUID.randomUUID(), "generic.attackSpeed", 1.0, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND);
@@ -109,7 +111,7 @@ public class CustomItems {
 
     public static ItemStack createNetheriteShovel() {
 
-        ItemStack s = new ItemBuilder(Material.DIAMOND_SHOVEL).setDisplayName(format("&6Pala de Netherite")).build();
+        ItemStack s = new ItemBuilder(Material.DIAMOND_SHOVEL).setCustomModelData(1, !Main.isOptifineEnabled()).setDisplayName(format("&6Pala de Netherite")).build();
         ItemMeta meta = s.getItemMeta();
         AttributeModifier modifier = new AttributeModifier(UUID.randomUUID(), "generic.attackDamage", 6.5, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND);
         AttributeModifier modifier2 = new AttributeModifier(UUID.randomUUID(), "generic.attackSpeed", 1.0, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND);
@@ -123,7 +125,7 @@ public class CustomItems {
 
     public static ItemStack crearInfernalNetherite() {
 
-        ItemStack s = new ItemBuilder(Material.DIAMOND).setDisplayName(format("&6Infernal Netherite Block")).build();
+        ItemStack s = new ItemBuilder(Material.DIAMOND).setCustomModelData(1, !Main.isOptifineEnabled()).setDisplayName(format("&6Infernal Netherite Block")).build();
         ItemMeta meta = s.getItemMeta();
         meta.setUnbreakable(true);
         meta.setLore(Arrays.asList(HiddenStringUtils.encodeString("{" + UUID.randomUUID().toString() + ": 0}")));

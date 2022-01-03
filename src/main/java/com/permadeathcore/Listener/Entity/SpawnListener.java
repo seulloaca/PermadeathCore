@@ -7,12 +7,14 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
+import com.permadeathcore.CustomMobs.DeathModule.DeathModule;
 import com.permadeathcore.Main;
 import com.permadeathcore.NMS.VersionManager;
 import com.permadeathcore.Task.GatoGalacticoTask;
-import com.permadeathcore.Util.Item.CustomItems;
-import com.permadeathcore.Util.Item.ItemBuilder;
-import com.permadeathcore.Util.Item.LeatherArmorBuilder;
+import com.permadeathcore.Util.Item.PermaDeathItems;
+import com.permadeathcore.Util.Library.ItemBuilder;
+import com.permadeathcore.Util.Library.LeatherArmorBuilder;
+import com.permadeathcore.Util.Item.NetheriteArmor;
 import org.bukkit.*;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -27,7 +29,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.*;
-import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
@@ -72,14 +73,11 @@ public class SpawnListener implements Listener{
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onSpawn(CreatureSpawnEvent event) {
-        if (event.isCancelled()) return;
         LivingEntity entity = event.getEntity();
         EntityType eventEntityType = event.getEntityType();
         Location location = event.getLocation();
         World world = location.getWorld();
         CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
-
-        boolean highCount = false;
 
         if (optimizeSpawns && world.getEnvironment() == World.Environment.NORMAL) {
             if (reason == CreatureSpawnEvent.SpawnReason.NATURAL || reason == CreatureSpawnEvent.SpawnReason.CUSTOM) {
@@ -88,15 +86,17 @@ public class SpawnListener implements Listener{
                             .filter(entity1 -> entity1.getType() == eventEntityType)
                             .map(eventEntityType.getEntityClass()::cast)
                             .collect(Collectors.toList()).size() >= 8) {
-                        highCount = true;
+                        event.setCancelled(true);
                     }
                 }
             }
         }
-        if (highCount) {
+
+        if (optimizeSpawns && world.getEnvironment() != World.Environment.THE_END && entity instanceof Monster && world.getEntitiesByClass(Monster.class).size() >= 220) {
             event.setCancelled(true);
-            return;
         }
+
+        if (event.isCancelled()) return;
 
         spawnBeginningMob(event);
         spawnNetheriteMob(event);
@@ -297,18 +297,40 @@ public class SpawnListener implements Listener{
                     ravager.setRemoveWhenFarAway(true);
                 }
             }
+
+            if (entity.getEquipment() != null && (entity.getType() == EntityType.SKELETON || entity.getType() == EntityType.ZOMBIE)) {
+                ItemStack[] contents = entity.getEquipment().getArmorContents().clone();
+
+                int index = 0;
+                for (ItemStack armor : contents) {
+                    if (armor != null && armor.getType().name().toLowerCase().contains("leather_") && !armor.getItemMeta().isUnbreakable()) {
+                        contents[index] = null;
+                    }
+                    index++;
+                }
+                entity.getEquipment().setArmorContents(contents);
+            }
         }
 
         if (plugin.getDays() >= 30) {
-
             if (entity instanceof Silverfish || entity instanceof Endermite) addMobEffects(entity, 100);
             if (entity instanceof Enderman) {
                 entity.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, plugin.getDays() < 60 ? 1 : 9));
 
-                if (world.getEnvironment() == World.Environment.NETHER && plugin.getDays() >= 40) {
-                    event.setCancelled(true);
-                    Creeper c = plugin.getFactory().spawnEnderCreeper(event.getLocation(), null);
-                    c.setMetadata("nether_creeper", new FixedMetadataValue(plugin, true));
+                if (plugin.getDays() >= 40) {
+                    if (world.getEnvironment() == World.Environment.NETHER) {
+                        event.setCancelled(true);
+                        Creeper c = plugin.getFactory().spawnEnderCreeper(event.getLocation(), null);
+                        c.setMetadata("nether_creeper", new FixedMetadataValue(plugin, true));
+                    }
+
+                    if (random.nextInt(100) <= 4 && world.getEnvironment() == World.Environment.NORMAL) {
+                        try {
+                            DeathModule module = (DeathModule) Class.forName("com.permadeathcore.CustomMobs.DeathModule.DeathModule_" + VersionManager.getVersion()).newInstance();
+                            module.spawn(event.getLocation());
+                            event.setCancelled(true);
+                        } catch (Exception x) {}
+                    }
                 }
             }
 
@@ -574,7 +596,7 @@ public class SpawnListener implements Listener{
                         prob = random.nextInt(125) + 1;
                     }
 
-                    if (event.getLocation().distance(event.getLocation().getWorld().getHighestBlockAt(event.getLocation()).getLocation()) <= 3) {
+                    if (event.getLocation().getBlock().getBiome() == Biome.PLAINS) {
 
                         if (prob == 5) {
 
@@ -773,6 +795,9 @@ public class SpawnListener implements Listener{
         Skeleton skeleton = null;
         World w = l.getWorld();
 
+
+        if (liv instanceof CaveSpider) return;
+
         if (liv instanceof Spider) {
             if (randomClass == 5 || randomClass == 2) {
                 skeleton = w.spawn(l, WitherSkeleton.class);
@@ -800,7 +825,7 @@ public class SpawnListener implements Listener{
         ItemStack offHand = null;
         Float mainDrop = 0.0f;
         Float offDrop = 0.0f;
-        Float armorDropChance = 8.5f;
+        Float armorDropChance = 0.8F;
 
         Enchantment armorEnchant = null;
         int armorEnchantLvl = 0;
@@ -888,10 +913,10 @@ public class SpawnListener implements Listener{
                     skeleton.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, (plugin.getDays() < 60 ? 1 : 3)));
                 }
             } else if (randomClass == 5) {
-                helmet = new LeatherArmorBuilder(Material.LEATHER_HELMET, 1).setColor(Color.fromRGB(0xFF0000)).build();
-                chestplate = new LeatherArmorBuilder(Material.LEATHER_CHESTPLATE, 1).setColor(Color.fromRGB(0xFF0000)).build();
-                legs = new LeatherArmorBuilder(Material.LEATHER_LEGGINGS, 1).setColor(Color.fromRGB(0xFF0000)).build();
-                boots = new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.fromRGB(0xFF0000)).build();
+                helmet = new LeatherArmorBuilder(Material.LEATHER_HELMET, 1).setColor(Color.fromRGB(0xFF0000)).setUnbrekeable(true).build();
+                chestplate = new LeatherArmorBuilder(Material.LEATHER_CHESTPLATE, 1).setColor(Color.fromRGB(0xFF0000)).setUnbrekeable(true).build();
+                legs = new LeatherArmorBuilder(Material.LEATHER_LEGGINGS, 1).setColor(Color.fromRGB(0xFF0000)).setUnbrekeable(true).build();
+                boots = new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.fromRGB(0xFF0000)).setUnbrekeable(true).build();
                 armorDropChance = 0.0f;
 
                 int bow_power_level = (plugin.getDays() < 30 ? 10 : plugin.getDays() < 50 ? 50 : plugin.getDays() < 60 ? 60 : 150);
@@ -899,10 +924,10 @@ public class SpawnListener implements Listener{
                 mainHand = buildItem(Material.BOW).addEnchant(Enchantment.ARROW_DAMAGE, bow_power_level).build();
                 health = plugin.getDays() < 60 ? 40.0D : 60.0D;
             } else if (randomClass == 6) {
-                helmet = new LeatherArmorBuilder(Material.LEATHER_HELMET, 1).setColor(Color.BLUE).build();
-                chestplate = new LeatherArmorBuilder(Material.LEATHER_CHESTPLATE, 1).setColor(Color.BLUE).build();
-                legs = new LeatherArmorBuilder(Material.LEATHER_LEGGINGS, 1).setColor(Color.BLUE).build();
-                boots = new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.BLUE).build();
+                helmet = new LeatherArmorBuilder(Material.LEATHER_HELMET, 1).setColor(Color.BLUE).setUnbrekeable(true).build();
+                chestplate = new LeatherArmorBuilder(Material.LEATHER_CHESTPLATE, 1).setColor(Color.BLUE).setUnbrekeable(true).build();
+                legs = new LeatherArmorBuilder(Material.LEATHER_LEGGINGS, 1).setColor(Color.BLUE).setUnbrekeable(true).build();
+                boots = new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.BLUE).setUnbrekeable(true).build();
                 mainHand = buildItem(Material.BOW).build();
 
                 armorDropChance = 0.0f;
@@ -912,10 +937,10 @@ public class SpawnListener implements Listener{
                 health = 100.0D;
 
             } else if (randomClass == 7) {
-                helmet = new LeatherArmorBuilder(Material.LEATHER_HELMET, 1).setColor(Color.GREEN).build();
-                chestplate = new LeatherArmorBuilder(Material.LEATHER_CHESTPLATE, 1).setColor(Color.GREEN).build();
-                legs = new LeatherArmorBuilder(Material.LEATHER_LEGGINGS, 1).setColor(Color.GREEN).build();
-                boots = new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.GREEN).build();
+                helmet = new LeatherArmorBuilder(Material.LEATHER_HELMET, 1).setColor(Color.GREEN).setUnbrekeable(true).build();
+                chestplate = new LeatherArmorBuilder(Material.LEATHER_CHESTPLATE, 1).setColor(Color.GREEN).setUnbrekeable(true).build();
+                legs = new LeatherArmorBuilder(Material.LEATHER_LEGGINGS, 1).setColor(Color.GREEN).setUnbrekeable(true).build();
+                boots = new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.GREEN).setUnbrekeable(true).build();
                 mainHand = buildItem(Material.BOW).build();
                 offHand = getPotionItemStack2();
                 armorDropChance = 0.0f;
@@ -1094,7 +1119,6 @@ public class SpawnListener implements Listener{
     public void onDeath(EntityDeathEvent event) {
 
         if (plugin.getDays() >= 20) {
-
             LivingEntity mob = event.getEntity();
 
             if (plugin.getDays() < 40) {
@@ -1189,20 +1213,13 @@ public class SpawnListener implements Listener{
                 }
 
                 if (event.getEntity() instanceof Ravager) {
-
                     Ravager ravager = (Ravager) event.getEntity();
                     if (ravager.getCustomName() == null) return;
                     if (ravager.getCustomName().contains(plugin.format("&6Ultra Ravager"))) {
                         if (ravager.getWorld().getEnvironment() != World.Environment.NETHER) {
                             event.getDrops().clear();
                         } else {
-                            int r = random.nextInt(100) + 1;
-                            int prob = 100;
-                            if (plugin.getDays() >= 60) {
-                                prob = 33;
-                            }
-                            if (r <= prob) {
-
+                            if ((random.nextInt(100) + 1) <= (plugin.getDays() < 60 ? 100 : 33)) {
                                 event.getDrops().add(new ItemStack(Material.TOTEM_OF_UNDYING));
                             }
                         }
@@ -1210,11 +1227,9 @@ public class SpawnListener implements Listener{
                 }
             }
 
-            if (plugin.getDays() >= 50) {
+            if (plugin.getDays() < 60 && plugin.getDays() >= 50) {
                 if (event.getEntity().getType() == EntityType.GIANT) {
-                    if (plugin.getDays() < 60) {
-                        event.getDrops().add(new ItemBuilder(Material.BOW).setDisplayName(plugin.format("&bArco de Gigante")).addEnchant(Enchantment.ARROW_DAMAGE, 10).build());
-                    }
+                    event.getDrops().add(new ItemBuilder(Material.BOW).setDisplayName(plugin.format("&bArco de Gigante")).addEnchant(Enchantment.ARROW_DAMAGE, 10).build());
                 }
 
                 if (event.getEntity().getType() == EntityType.WITHER_SKELETON) {
@@ -1224,12 +1239,47 @@ public class SpawnListener implements Listener{
                         if (plugin.getDays() < 60) {
                             int prob = (int) (Math.random() * 100) + 1;
                             if (prob <= 50) {
-                                event.getDrops().add(CustomItems.createNetheriteSword());
+                                event.getDrops().add(PermaDeathItems.createNetheriteSword());
                             }
                         }
                     }
                 }
             }
+        }
+
+        this.runNetheriteCheck(event);
+    }
+
+    private void runNetheriteCheck(EntityDeathEvent event) {
+        if (plugin.getDays() < 25 || plugin.getDays() >= 30 || event.getEntity().getKiller() == null) return;
+
+        LivingEntity Mob = event.getEntity();
+
+        int hp = Integer.parseInt(Objects.requireNonNull(Main.instance.getConfig().getString("Toggles.Netherite.Helmet")));
+        int cp = Integer.parseInt(Objects.requireNonNull(Main.instance.getConfig().getString("Toggles.Netherite.Chestplate")));
+        int lp = Integer.parseInt(Objects.requireNonNull(Main.instance.getConfig().getString("Toggles.Netherite.Leggings")));
+        int bp = Integer.parseInt(Objects.requireNonNull(Main.instance.getConfig().getString("Toggles.Netherite.Boots")));
+
+        int RandProb = ThreadLocalRandom.current().nextInt(1, 101);
+
+        if (Mob instanceof CaveSpider && RandProb <= hp) {
+            event.getDrops().clear();
+            event.getDrops().add(NetheriteArmor.craftNetheriteHelmet());
+        }
+
+        if (Mob instanceof Slime && RandProb <= cp) {
+            event.getDrops().clear();
+            event.getDrops().add(NetheriteArmor.craftNetheriteChest());
+        }
+
+        if (Mob instanceof MagmaCube && RandProb <= lp) {
+            event.getDrops().clear();
+            event.getDrops().add(NetheriteArmor.craftNetheriteLegs());
+        }
+
+        if (Mob instanceof Ghast && RandProb <= bp) {
+            event.getDrops().clear();
+            event.getDrops().add(NetheriteArmor.craftNetheriteBoots());
         }
     }
 
@@ -1290,7 +1340,7 @@ public class SpawnListener implements Listener{
                 skeleton.getEquipment().setBoots(new LeatherArmorBuilder(Material.LEATHER_BOOTS, 1).setColor(Color.fromRGB(255, 182, 193)).build());
 
                 int enchantLevel = (int) (Math.random() * 5) + 1;
-                skeleton.getEquipment().setItemInMainHand(new ItemBuilder(CustomItems.createNetheriteSword()).addEnchant(Enchantment.DAMAGE_ALL, enchantLevel).build());
+                skeleton.getEquipment().setItemInMainHand(new ItemBuilder(PermaDeathItems.createNetheriteSword()).addEnchant(Enchantment.DAMAGE_ALL, enchantLevel).build());
 
                 skeleton.getEquipment().setChestplateDropChance(0);
                 skeleton.getEquipment().setBootsDropChance(0);
@@ -1322,14 +1372,6 @@ public class SpawnListener implements Listener{
                 plugin.getNmsAccesor().setMaxHealth(c, 100.0D, true);
                 c.setExplosionRadius(7);
             }
-        }
-    }
-
-    private boolean isHostileMob(EntityType type) {
-        if (type == EntityType.BLAZE ||type == EntityType.CREEPER ||type == EntityType.GHAST ||type == EntityType.MAGMA_CUBE ||type == EntityType.SILVERFISH ||type == EntityType.SKELETON ||type == EntityType.SLIME ||type == EntityType.ZOMBIE ||type == EntityType.ZOMBIE_VILLAGER ||type == EntityType.DROWNED ||type == EntityType.WITHER_SKELETON ||type == EntityType.WITCH ||type == EntityType.PILLAGER ||type == EntityType.EVOKER ||type == EntityType.VINDICATOR ||type == EntityType.RAVAGER ||type == EntityType.VEX ||type == EntityType.GUARDIAN ||type == EntityType.ELDER_GUARDIAN ||type == EntityType.SHULKER ||type == EntityType.HUSK ||type == EntityType.STRAY ||type == EntityType.PHANTOM) {
-            return true;
-        } else {
-            return false;
         }
     }
 

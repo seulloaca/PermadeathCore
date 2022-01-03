@@ -1,6 +1,6 @@
 package com.permadeathcore.TheBeginning.Block;
 
-import com.permadeathcore.Util.Item.CustomItems;
+import com.permadeathcore.Util.Item.PermaDeathItems;
 import net.minecraft.server.v1_16_R2.BlockPosition;
 import net.minecraft.server.v1_16_R2.NBTTagCompound;
 import net.minecraft.server.v1_16_R2.NBTTagList;
@@ -97,7 +97,7 @@ public class CustomBlock_1_16_R2 implements CustomBlock {
             e.setDropItems(false);
             e.setExpToDrop(0);
 
-            e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation().add(0, 0.5, 0), CustomItems.crearInfernalNetherite());
+            e.getBlock().getWorld().dropItemNaturally(e.getBlock().getLocation().add(0, 0.5, 0), PermaDeathItems.crearInfernalNetherite());
         }
     }
 

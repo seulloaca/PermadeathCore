@@ -116,9 +116,6 @@ public class EndManager implements Listener {
 
     @EventHandler
     public void onDamageBE(EntityDamageByEntityEvent e) {
-        if (e.getEntity() instanceof Shulker && instance.getDays() >= 50) {
-            e.setCancelled(true);
-        }
 
         if (e.getEntity() instanceof Enderman) {
             Enderman man = (Enderman) e.getEntity();
@@ -165,7 +162,7 @@ public class EndManager implements Listener {
             e.setDroppedExp(0);
         }
 
-        if (entity instanceof Shulker) {
+        if (entity instanceof Shulker && ((Shulker) entity).getColor() != DyeColor.RED) {
             boolean isSure = true;
             for (Entity near : e.getEntity().getNearbyEntities(2, 2, 2)) {
                 if (near.getType() == EntityType.PRIMED_TNT) {

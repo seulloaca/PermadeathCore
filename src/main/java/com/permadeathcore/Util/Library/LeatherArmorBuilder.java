@@ -1,4 +1,4 @@
-package com.permadeathcore.Util.Item;
+package com.permadeathcore.Util.Library;
 
 import org.bukkit.Color;
 import org.bukkit.Material;

@@ -3,17 +3,17 @@ package com.permadeathcore;
 import com.permadeathcore.Discord.DiscordManager;
 import com.permadeathcore.Util.Configurations.Language;
 import com.permadeathcore.NMS.VersionManager;
-import com.permadeathcore.Util.Manager.PlayerDataManager;
-import com.permadeathcore.Util.Item.CustomItems;
-import com.permadeathcore.Util.Item.ItemBuilder;
-import com.permadeathcore.Util.Manager.DateManager;
-import com.permadeathcore.Util.Messages.MessageUtil;
+import com.permadeathcore.Util.Item.InfernalNetherite;
+import com.permadeathcore.Util.Item.NetheriteArmor;
+import com.permadeathcore.Util.Manager.Data.PlayerDataManager;
+import com.permadeathcore.Util.Item.PermaDeathItems;
+import com.permadeathcore.Util.Library.ItemBuilder;
+import com.permadeathcore.Util.Manager.Data.DateManager;
 import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.Creeper;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.WitherSkeleton;
 import org.bukkit.inventory.ItemFlag;
@@ -55,7 +55,15 @@ public class PDCCommand implements CommandExecutor {
                     if (player instanceof Player) {
 
                         int timeAwake = ((Player) player).getStatistic(Statistic.TIME_SINCE_REST) / 20;
-                        player.sendMessage(instance.tag + ChatColor.RED + "Tiempo despierto: " + ChatColor.GRAY + MessageUtil.convertSeconds(timeAwake));
+
+                        long hours = timeAwake % 86400 / 3600;
+                        long minutes = (timeAwake % 3600) / 60;
+                        long seconds = timeAwake % 60;
+                        long days = timeAwake / 86400;
+
+                        String awake = (days >= 1 ? days + " días " : "") + String.format("%02d:%02d:%02d", hours, minutes, seconds);
+
+                        player.sendMessage(instance.tag + ChatColor.RED + "Tiempo despierto: " + ChatColor.GRAY + awake);
                     }
 
                 } else if (args[0].equalsIgnoreCase("duracion")) {
@@ -198,7 +206,7 @@ public class PDCCommand implements CommandExecutor {
                         player.sendMessage(instance.format("&fMundo de overworld: &a" + instance.world.getName()));
                         player.sendMessage(instance.format("&fMundo de end: &a" + instance.endWorld.getName()));
                         player.sendMessage(instance.format(""));
-                        player.sendMessage(instance.format("&eEsta información es brindada en nuestro discord, &f&ndiscord.gg/InfernalCore"));
+                        player.sendMessage(instance.format("&eEsta información es brindada en nuestro discord, &f&nhttps://discord.gg/w58wzrcJU8"));
 
                         //player.sendMessage(instance.format("&"));
 
@@ -210,13 +218,13 @@ public class PDCCommand implements CommandExecutor {
                         player.sendMessage("Debug cambiado a " + Main.DEBUG);
 
                     } else if (args[1].equalsIgnoreCase("health")) {
-                        player.sendMessage("Vida máxima: " + Main.getInstance().getDrops().getAvaibleMaxHealth(p));
+                        player.sendMessage("Vida máxima: " + NetheriteArmor.getAvaibleMaxHealth(p));
                     } else if (args[1].equalsIgnoreCase("events")) {
                         player.sendMessage("Eventos:");
                         player.sendMessage("Shulker shell: " + (Main.getInstance().getShulkerEvent().isRunning() ? "corriendo, tiempo: " + Main.getInstance().getShulkerEvent().getTimeLeft() + ", bossbar:" + Main.getInstance().getShulkerEvent().getBossBar().getTitle() : "no corriendo"));
                         player.sendMessage("Life Orb: " + (Main.getInstance().getOrbEvent().isRunning() ? "corriendo, tiempo: " + Main.getInstance().getOrbEvent().getTimeLeft() + ", bossbar:" + Main.getInstance().getOrbEvent().getBossBar().getTitle() : "no corriendo"));
                     } else if (args[1].equalsIgnoreCase("hasOrb")) {
-                        boolean hasOrb = (instance.getOrbEvent().isRunning() ? true : instance.getDrops().checkForOrb(p));
+                        boolean hasOrb = (instance.getOrbEvent().isRunning() ? true : NetheriteArmor.checkForOrb(p));
                         p.sendMessage("Orb: " + hasOrb);
                     } else if (args[1].equalsIgnoreCase("hyper")) {
                         boolean doPlayerAteOne = p.getPersistentDataContainer().has(new NamespacedKey(Main.getInstance(), "hyper_one"), PersistentDataType.BYTE);
@@ -345,9 +353,55 @@ public class PDCCommand implements CommandExecutor {
                     player.sendMessage(ChatColor.GRAY + "- Versión: " + ChatColor.GREEN + "PermaDeathCore v" + instance.getDescription().getVersion());
                     player.sendMessage(ChatColor.GRAY + "- Dificultades: " + ChatColor.GREEN + "Soportado de día 1 a día 60");
                     player.sendMessage(ChatColor.GRAY + "- Autor: " + ChatColor.GREEN + "Equipo de InfernalCore (Desarrollador principal: SebazCRC)");
-                    player.sendMessage(ChatColor.GRAY + "- Página web: " + ChatColor.GREEN + "http://infernalcore.net/");
                 } else if (args[0].equalsIgnoreCase("discord")) {
-                    player.sendMessage(instance.tag + ChatColor.BLUE + "http://infernalcore.net/discord");
+                    player.sendMessage(instance.tag + ChatColor.BLUE + "https://discord.gg/w58wzrcJU8 | https://discord.gg/infernalcore");
+
+                } else if (args[0].equalsIgnoreCase("cambios")) {
+
+                    player.sendMessage(Main.format("&eEste plugin contiene &c&lTODOS &r&elos cambios de PermaDeath."));
+                    player.sendMessage(Main.format("&eMás información aquí:"));
+                    player.sendMessage(Main.format("&b> &f&lhttps://twitter.com/permadeathsmp"));
+                    player.sendMessage(Main.format("&b> &f&lhttps://permadeath.fandom.com/es/wiki/Cambios_de_dificultad"));
+
+                } else if (args[0].equalsIgnoreCase("beginning")) {
+
+                    if (!player.hasPermission("permadeathcore.admin")) {
+                        player.sendMessage(instance.format("&cNo tienes permiso para ejecutar este comando."));
+                        return false;
+                    }
+
+                    if (args.length == 1) {
+                        player.sendMessage(instance.format(instance.tag + "&cLista de comandos para The Beginning"));
+                        player.sendMessage(instance.format("&7/pdc beginning bendicion <jugador> &f&l- &cOtorga la bendición de The Beginning a un jugador."));
+                        player.sendMessage(instance.format("&7/pdc beginning maldicion <jugador> &f&l- &cOtorga la maldición de The Beginning a un jugador."));
+                        //player.sendMessage(instance.format("&7/pdc speedrun &f&l- &c."));
+                        return false;
+                    }
+
+                    if (args.length == 2) {
+                        player.sendMessage(instance.format("&cEscribe el nombre de un jugador."));
+                        return false;
+                    }
+
+                    Player off = Bukkit.getPlayer(args[2]);
+                    if (off == null) {
+                        player.sendMessage(instance.format("&c¡No hemos podido encontrar a ese jugador!"));
+                        return false;
+                    }
+
+                    if (args[1].equalsIgnoreCase("bendicion")) {
+                        player.sendMessage(instance.format("&aSe ha otorgado la bendición de The Beginning a &b" + off.getName()));
+                        Bukkit.broadcastMessage(Main.format(Main.tag + "&d&lEnhorabuena " + off.getName() + " has recibido la bendición del comienzo por entrar primero a The Beginning. Suerte."));
+                        off.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, (60*60*12*20), 1));
+                    }
+
+                    if (args[1].equalsIgnoreCase("maldicion")) {
+                        player.sendMessage(instance.format("&aSe ha otorgado la maldición de The Beginning a &b" + off.getName()));
+                        Bukkit.broadcastMessage(Main.format(Main.tag + "&d&l" + off.getName() + ", ¡Desgracia! has recibido la maldición de The Beginning por entrar de último."));
+                        Bukkit.broadcastMessage(Main.format("&d&l¡Sufre y muere por lento! NO puedes usar cubos de leche dentro de Permadeath por 12 horas o serás PERMABANEADO."));
+                        off.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, (60*60*12*20), 0));
+                        off.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, (60*60*12*20), 0));
+                    }
 
                 } else if (args[0].equalsIgnoreCase("speedrun")) {
 
@@ -538,7 +592,7 @@ public class PDCCommand implements CommandExecutor {
                     if (args.length == 1) {
 
                         p.sendMessage(instance.format("&ePor favor introduce el ítem deseado"));
-                        p.sendMessage(instance.format("&eEjemplos: &7medalla - netheriteArmor - infernalArmor - infernalBlock - netheriteTools"));
+                        p.sendMessage(instance.format("&eEjemplos: &7medalla - netheriteArmor - infernalArmor - infernalBlock - netheriteTools - lifeOrb - endRelic - beginningRelic"));
                         return false;
                     }
 
@@ -546,10 +600,10 @@ public class PDCCommand implements CommandExecutor {
 
                     if (s.toLowerCase().equalsIgnoreCase("netheritearmor")) {
 
-                        p.getInventory().addItem(instance.getDrops().craftNetheriteHelmet());
-                        p.getInventory().addItem(instance.getDrops().craftNetheriteChest());
-                        p.getInventory().addItem(instance.getDrops().craftNetheriteLegs());
-                        p.getInventory().addItem(instance.getDrops().craftNetheriteBoots());
+                        p.getInventory().addItem(NetheriteArmor.craftNetheriteHelmet());
+                        p.getInventory().addItem(NetheriteArmor.craftNetheriteChest());
+                        p.getInventory().addItem(NetheriteArmor.craftNetheriteLegs());
+                        p.getInventory().addItem(NetheriteArmor.craftNetheriteBoots());
 
                         p.sendMessage(instance.format("&eHas recibido la armadura de Netherite (comprueba no tener el inventario lleno)"));
 
@@ -563,30 +617,39 @@ public class PDCCommand implements CommandExecutor {
 
                     } else if (s.toLowerCase().equalsIgnoreCase("infernalarmor")) {
 
-                        p.getInventory().addItem(instance.getInfernalNetherite().craftNetheriteHelmet());
-                        p.getInventory().addItem(instance.getInfernalNetherite().craftNetheriteChest());
-                        p.getInventory().addItem(instance.getInfernalNetherite().craftNetheriteLegs());
-                        p.getInventory().addItem(instance.getInfernalNetherite().craftNetheriteBoots());
+                        p.getInventory().addItem(InfernalNetherite.craftNetheriteHelmet());
+                        p.getInventory().addItem(InfernalNetherite.craftNetheriteChest());
+                        p.getInventory().addItem(InfernalNetherite.craftNetheriteLegs());
+                        p.getInventory().addItem(InfernalNetherite.craftNetheriteBoots());
 
                         p.sendMessage(instance.format("&eHas recibido la armadura de Netherite Infernal (comprueba no tener el inventario lleno)"));
 
                     } else if (s.toLowerCase().equalsIgnoreCase("netheritetools")) {
 
-                        p.getInventory().addItem(CustomItems.createNetheritePickaxe());
-                        p.getInventory().addItem(CustomItems.createNetheriteSword());
-                        p.getInventory().addItem(CustomItems.createNetheriteAxe());
-                        p.getInventory().addItem(CustomItems.createNetheriteShovel());
-                        p.getInventory().addItem(CustomItems.createNetheriteHoe());
+                        p.getInventory().addItem(PermaDeathItems.createNetheritePickaxe());
+                        p.getInventory().addItem(PermaDeathItems.createNetheriteSword());
+                        p.getInventory().addItem(PermaDeathItems.createNetheriteAxe());
+                        p.getInventory().addItem(PermaDeathItems.createNetheriteShovel());
+                        p.getInventory().addItem(PermaDeathItems.createNetheriteHoe());
 
                         p.sendMessage(instance.format("&eHas recibido las herramientas de Netherite (comprueba no tener el inventario lleno)"));
 
                     } else if (s.toLowerCase().equalsIgnoreCase("infernalblock")) {
-                        p.getInventory().addItem(CustomItems.crearInfernalNetherite());
+                        p.getInventory().addItem(PermaDeathItems.crearInfernalNetherite());
                         p.sendMessage(instance.format("&eHas recibido el Bloque de Netherite Infernal (comprueba no tener el inventario lleno)"));
+                    } else if (s.toLowerCase().equalsIgnoreCase("lifeorb")) {
+                        p.getInventory().addItem(PermaDeathItems.createLifeOrb());
+                        p.sendMessage(instance.format("&eHas recibido el Orbe de Vida (comprueba no tener el inventario lleno)"));
+                    } else if (s.toLowerCase().equalsIgnoreCase("endrelic")) {
+                        p.getInventory().addItem(PermaDeathItems.crearReliquia());
+                        p.sendMessage(instance.format("&eHas recibido la Reliquia del Fin (comprueba no tener el inventario lleno)"));
+                    } else if (s.toLowerCase().equalsIgnoreCase("beginningrelic")) {
+                        p.getInventory().addItem(PermaDeathItems.createLifeOrb());
+                        p.sendMessage(instance.format("&eHas recibido la Reliquia del Comienzo (comprueba no tener el inventario lleno)"));
                     } else {
 
                         p.sendMessage(instance.format("&ePor favor introduce el ítem deseado"));
-                        p.sendMessage(instance.format("&eEjemplos: &7medalla - netheriteArmor - infernalArmor - infernalBlock - netheriteTools"));
+                        p.sendMessage(instance.format("&eEjemplos: &7medalla - netheriteArmor - infernalArmor - infernalBlock - netheriteTools - lifeOrb - endRelic - beginningRelic"));
                     }
 
                 } else if (args[0].equalsIgnoreCase("afk")) {
@@ -752,6 +815,7 @@ public class PDCCommand implements CommandExecutor {
         sender.sendMessage(ChatColor.RED + "/pdc idioma <es, en>" + ChatColor.GRAY + ChatColor.ITALIC + "(Cambia tu idioma)");
         sender.sendMessage(ChatColor.RED + "/pdc dias " + ChatColor.GRAY + ChatColor.ITALIC + "(Muestra el día en el que está el plugin)");
         sender.sendMessage(ChatColor.RED + "/pdc duracion " + ChatColor.GRAY + ChatColor.ITALIC + "(Muestra la duración de la tormenta)");
+        sender.sendMessage(ChatColor.RED + "/pdc cambios " + ChatColor.GRAY + ChatColor.ITALIC + "(Muestra los cambios de dificultad disponibles)");
 
         if (sender instanceof Player) {
 
@@ -770,7 +834,8 @@ public class PDCCommand implements CommandExecutor {
             sender.sendMessage(ChatColor.RED + "/pdc afk " + ChatColor.GRAY + ChatColor.ITALIC + "(Administra el sistema Anti-AFK)");
             sender.sendMessage(ChatColor.RED + "/pdc storm " + ChatColor.GRAY + ChatColor.ITALIC + "(Administra la tormenta)");
             sender.sendMessage(ChatColor.RED + "/pdc cambiarDia <dia> " + ChatColor.GRAY + ChatColor.ITALIC + "(Cambia el día actual, pd: puede que requiera un reinicio)");
-            sender.sendMessage(ChatColor.RED + "/pdc speedrun" + ChatColor.GRAY + ChatColor.ITALIC + "(Comandos del modo SpeedRun, cada día es una hora)");
+            sender.sendMessage(ChatColor.RED + "/pdc speedrun " + ChatColor.GRAY + ChatColor.ITALIC + "(Comandos del modo SpeedRun, cada día es una hora)");
+            sender.sendMessage(ChatColor.RED + "/pdc beginning " + ChatColor.GRAY + ChatColor.ITALIC + "(Comandos de TheBeginning)");
             if (sender instanceof Player) {
                 sender.sendMessage(ChatColor.RED + "/pdc give <medalla, netheriteArmor, infernalArmor, infernalBlock, netheriteTools> " + ChatColor.GRAY + ChatColor.ITALIC + "(Obtén ítems especiales de Permadeath)");
             }

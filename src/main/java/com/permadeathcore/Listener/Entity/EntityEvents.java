@@ -2,22 +2,31 @@ package com.permadeathcore.Listener.Entity;
 
 import com.permadeathcore.Main;
 import com.permadeathcore.Util.Manager.EntityTeleport;
-import com.permadeathcore.Util.Manager.PlayerDataManager;
+import com.permadeathcore.Util.Manager.Data.PlayerDataManager;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.vehicle.VehicleDestroyEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.permadeathcore.Main.instance;
 
 public class EntityEvents implements Listener {
 
-
+    @EventHandler
+    public void onVD(VehicleDestroyEvent e) {
+        if (e.getVehicle().getPersistentDataContainer().has(new NamespacedKey(Main.getInstance(), "module_minecart"), PersistentDataType.BYTE)) {
+            e.setCancelled(true);
+        }
+    }
 
     @EventHandler
     public void onExplode(EntityExplodeEvent e) {
@@ -134,6 +143,35 @@ public class EntityEvents implements Listener {
 
                 e.setCancelled(true);
             }
+        }
+
+        if (e.getDamager().getType() == EntityType.FIREBALL) {
+            Fireball f = (Fireball) e.getDamager();
+            if (f.getShooter() instanceof Ghast) {
+                Ghast ghast = (Ghast) f.getShooter();
+                if (ghast.getPersistentDataContainer().has(new NamespacedKey(instance, "demonio_flotante"), PersistentDataType.BYTE)) {
+                    Entity entity = e.getEntity();
+                    if (entity instanceof LivingEntity) {
+                        LivingEntity liv = (LivingEntity) entity;
+                        liv.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 20*5, 49));
+                        liv.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 20*20, 4));
+                    }
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onFireBallHit(ProjectileLaunchEvent e) {
+        if (e.getEntity().getShooter() instanceof Ghast && instance.getDays() >= 25) {
+
+            Ghast ghast = (Ghast) e.getEntity().getShooter();
+            Fireball f = (Fireball) e.getEntity();
+            int yield = (e.getEntity().getWorld().getEnvironment() == World.Environment.THE_END || instance.getDays() >= 50 ? 6 : ThreadLocalRandom.current().nextInt(3, 5 + 1));
+
+            if (ghast.getPersistentDataContainer().has(new NamespacedKey(instance, "demonio_flotante"), PersistentDataType.BYTE)) yield = 0;
+
+            if (e.getEntity() instanceof Fireball) f.setYield(yield);
         }
     }
 }

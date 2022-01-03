@@ -1,8 +1,8 @@
 package com.permadeathcore.Listener.Block;
 
 import com.permadeathcore.Main;
-import com.permadeathcore.Util.Manager.EndDataManager;
-import com.permadeathcore.Util.Item.CustomItems;
+import com.permadeathcore.Util.Manager.Data.EndDataManager;
+import com.permadeathcore.Util.Item.PermaDeathItems;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
@@ -126,11 +126,11 @@ public class BlockEvents implements Listener {
         if (Main.getInstance().getDays() >= 50) {
 
             ArrayList<ItemStack> items = new ArrayList<>();
-            items.add(CustomItems.createNetheriteAxe());
-            items.add(CustomItems.createNetheriteShovel());
-            items.add(CustomItems.createNetheriteSword());
-            items.add(CustomItems.createNetheritePickaxe());
-            items.add(CustomItems.createNetheriteHoe());
+            items.add(PermaDeathItems.createNetheriteAxe());
+            items.add(PermaDeathItems.createNetheriteShovel());
+            items.add(PermaDeathItems.createNetheriteSword());
+            items.add(PermaDeathItems.createNetheritePickaxe());
+            items.add(PermaDeathItems.createNetheriteHoe());
 
             boolean damage = true;
 

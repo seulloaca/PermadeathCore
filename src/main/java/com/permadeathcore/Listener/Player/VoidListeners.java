@@ -1,9 +1,6 @@
 package com.permadeathcore.Listener.Player;
 
-import com.permadeathcore.Task.GatoGalacticoTask;
 import com.permadeathcore.Main;
-import com.permadeathcore.Util.Item.HiddenStringUtils;
-import com.permadeathcore.Util.Item.ItemBuilder;
 import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
@@ -13,17 +10,13 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.*;
 import org.bukkit.event.player.*;
-import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Random;
-import java.util.UUID;
 
 public class VoidListeners implements Listener {
 

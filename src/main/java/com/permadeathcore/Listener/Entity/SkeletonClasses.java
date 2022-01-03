@@ -8,6 +8,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -21,6 +22,7 @@ public class SkeletonClasses implements Listener{
 
     @EventHandler
     public void onH(ProjectileHitEvent e) {
+
 
         if (!(e.getEntity().getShooter() instanceof Skeleton)) return;
 
@@ -53,7 +55,20 @@ public class SkeletonClasses implements Listener{
                 } catch (Exception x) {}
             }
         }
+
+        if (e.getDamager() instanceof ShulkerBullet) {
+
+            ShulkerBullet b = (ShulkerBullet) e.getDamager();
+            if (b.getShooter() instanceof Shulker && ((Shulker) b).getColor() == DyeColor.RED && e.getEntity() != null && e.getEntity().getType() == EntityType.CAVE_SPIDER) {
+                e.setCancelled(true);
+            }
+        }
     }
 
-
+    @EventHandler
+    public void onEntityDamageEvent(EntityDamageEvent e) {
+        if (e.getEntity() instanceof Shulker && ((Shulker) e.getEntity()).getColor() == DyeColor.RED && e.getCause() == EntityDamageEvent.DamageCause.MAGIC) {
+            e.setCancelled(true);
+        }
+    }
 }

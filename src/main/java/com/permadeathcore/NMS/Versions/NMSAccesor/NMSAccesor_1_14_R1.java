@@ -6,6 +6,7 @@ import net.minecraft.server.v1_14_R1.*;
 import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.craftbukkit.v1_14_R1.entity.CraftEntity;
+import org.bukkit.craftbukkit.v1_14_R1.entity.CraftHumanEntity;
 import org.bukkit.craftbukkit.v1_14_R1.entity.CraftLivingEntity;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
@@ -106,7 +107,9 @@ public class NMSAccesor_1_14_R1 implements NMSAccesor {
     @Override
     public void unregisterAttributes(Entity who) {
 
+        CraftHumanEntity
         net.minecraft.server.v1_14_R1.EntityLiving insentient = (net.minecraft.server.v1_14_R1.EntityLiving) ((org.bukkit.craftbukkit.v1_14_R1.entity.CraftEntity)who).getHandle();
+
 
         try {
 

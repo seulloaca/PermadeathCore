@@ -1,7 +1,7 @@
 package com.permadeathcore.Util.Configurations;
 
 import com.permadeathcore.Main;
-import com.permadeathcore.Util.Manager.PlayerDataManager;
+import com.permadeathcore.Util.Manager.Data.PlayerDataManager;
 import com.permadeathcore.Util.Library.FileAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;

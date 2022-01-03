@@ -1,7 +1,6 @@
-package com.permadeathcore.Util.Log;
+package com.permadeathcore.Util.Manager.Log;
 
 import com.permadeathcore.Main;
-import org.bukkit.configuration.file.FileConfiguration;
 
 import java.io.BufferedWriter;
 import java.io.File;
